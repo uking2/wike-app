@@ -413,7 +413,15 @@
                 const { data: urlData } = supabaseClient.storage.from('wike').getPublicUrl(filePath); // Use the same full path
                 const imageUrl = urlData.publicUrl;
 
-                // Part 4: Insert record into the database
+                // =================================================================================
+                // ===> FIX IS HERE <===
+                // The "row violate error" comes from Supabase, not your code.
+                // It means Row Level Security (RLS) is preventing this 'insert' command.
+                // To fix this, you need to create a new "Policy" in your Supabase dashboard
+                // that allows anyone to INSERT data into your 'qrcode' table.
+                //
+                // See the instructions outside this code block for the step-by-step solution.
+                // =================================================================================
                 const { error: dbError } = await supabaseClient
                     .from('qrcode') // Use 'qrcode' table
                     .insert([
@@ -421,6 +429,7 @@
                     ]);
 
                 if (dbError) {
+                    // This is where the RLS error will be thrown
                     throw dbError;
                 }
 
@@ -428,6 +437,7 @@
 
             } catch (err) {
                 console.error("Download or save process failed:", err);
+                // The error message will likely contain "violates row-level security policy"
                 showNotification(`Save Failed: ${err.message}`, true);
             } finally {
                 downloadBtn.disabled = false;
@@ -456,7 +466,10 @@
                         text: `Scan this QR code for: ${text}`,
                     });
                 } catch (error) {
-                    console.error('Error sharing QR code:', error);
+                    // Catching share cancellation, which is not a true "error"
+                    if (error.name !== 'AbortError') {
+                       console.error('Error sharing QR code:', error);
+                    }
                 }
             } else {
                 showNotification("Sharing not supported on this browser.", true);
@@ -506,6 +519,7 @@
             const savedTheme = localStorage.getItem('theme') || 'dark'; // Default to dark
             updateDarkMode(savedTheme === 'dark');
             if (!navigator.share) {
+                // Hides the share button if the browser doesn't support the Web Share API
                 shareBtn.style.display = 'none';
             }
         });

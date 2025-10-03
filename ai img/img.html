@@ -7,17 +7,445 @@
     <title>AI Image Generator</title>
     <!-- SUPABASE CDN: Added for database integration -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <link rel="stylesheet" href="image.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* General Styles */
+        :root {
+            --background-color: #121212;
+            --surface-color: #1e1e1e;
+            --primary-color: #4a9eff;
+            --primary-hover-color: #6babff;
+            --text-color: #e0e0e0;
+            --text-muted-color: #8c8c8c;
+            --border-color: #333;
+            --success-color: #28a745;
+            --error-color: #dc3545;
+            --info-color: #17a2b8;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 2rem 1rem;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+            background-color: var(--surface-color);
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            color: white;
+            margin: 0;
+        }
+
+        .subtitle {
+            color: var(--text-muted-color);
+            margin-bottom: 2rem;
+        }
+
+        .nav-buttons a {
+            text-decoration: none;
+            color: var(--text-color);
+            background-color: var(--border-color);
+            padding: 0.6rem 1.2rem;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: background-color 0.3s;
+        }
+
+        .nav-buttons a:hover {
+            background-color: #444;
+        }
+
+        /* Generator Section */
+        .generator-section {
+            background-color: rgba(0, 0, 0, 0.2);
+            padding: 1.5rem;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: var(--text-muted-color);
+        }
+
+        .prompt-input {
+            width: 100%;
+            padding: 1rem;
+            background-color: var(--background-color);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-color);
+            font-size: 1rem;
+            resize: vertical;
+            min-height: 100px;
+            box-sizing: border-box;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+
+        .prompt-input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.2);
+        }
+
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+
+        .control-input {
+            width: 100%;
+            padding: 0.75rem;
+            background-color: var(--background-color);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-color);
+            font-size: 0.9rem;
+            cursor: pointer;
+        }
+
+        .generate-btn {
+            width: 100%;
+            padding: 1rem;
+            background: linear-gradient(90deg, var(--primary-color), #8e44ad);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .generate-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(74, 158, 255, 0.3);
+        }
+
+        .generate-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .loading-spinner {
+            display: none;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top: 3px solid white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Results Section */
+        .results-section {
+            margin-top: 2rem;
+        }
+
+        .results-header h2 {
+            font-size: 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.5rem;
+        }
+
+        .placeholder {
+            text-align: center;
+            padding: 4rem 1rem;
+            border: 2px dashed var(--border-color);
+            border-radius: 12px;
+            color: var(--text-muted-color);
+            cursor: pointer;
+            transition: background-color 0.3s, border-color 0.3s;
+        }
+
+        .placeholder:hover {
+            background-color: rgba(255, 255, 255, 0.05);
+            border-color: var(--primary-color);
+        }
+
+        .placeholder-icon {
+            width: 64px;
+            height: 64px;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        .image-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1rem;
+        }
+
+        .image-card {
+            background-color: var(--background-color);
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .image-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .image-container {
+            position: relative;
+            cursor: pointer;
+        }
+
+        .image-card img {
+            width: 100%;
+            height: 250px;
+            object-fit: cover;
+            display: block;
+        }
+
+        .image-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1rem;
+        }
+
+        .image-container:hover .image-overlay {
+            opacity: 1;
+        }
+
+        .image-info {
+            padding: 1rem;
+        }
+
+        .image-prompt {
+            font-style: italic;
+            margin-bottom: 1rem;
+            color: var(--text-muted-color);
+        }
+
+        .image-details {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            font-size: 0.8rem;
+        }
+
+        .image-details span {
+            background-color: var(--border-color);
+            padding: 0.25rem 0.6rem;
+            border-radius: 12px;
+        }
+
+        .download-btn {
+            width: 100%;
+            margin-top: 1rem;
+            padding: 0.6rem;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background-color 0.3s;
+        }
+
+        .download-btn:hover {
+            background-color: var(--primary-hover-color);
+        }
+
+        /* Status Messages */
+        .status-message {
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+            text-align: center;
+            font-weight: 500;
+        }
+
+        .status-success {
+            background-color: var(--success-color);
+            color: white;
+        }
+
+        .status-error {
+            background-color: var(--error-color);
+            color: white;
+        }
+
+        .status-info {
+            background-color: var(--info-color);
+            color: white;
+        }
+
+        /* Image Modal Styles */
+        .image-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            cursor: pointer;
+            padding: 1rem;
+            box-sizing: border-box;
+        }
+
+        .modal-content {
+            position: relative;
+            max-width: 90vw;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: default;
+        }
+
+        .modal-content img {
+            max-width: 100%;
+            max-height: calc(90vh - 80px);
+            /* Adjust for prompt and padding */
+            object-fit: contain;
+            border-radius: 8px;
+        }
+
+        .modal-prompt {
+            color: white;
+            margin-top: 1rem;
+            font-style: italic;
+            text-align: center;
+            max-width: 80%;
+        }
+
+        .close-modal-btn {
+            position: absolute;
+            top: -40px;
+            right: -20px;
+            background: #ff4444;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            cursor: pointer;
+            font-size: 1.2rem;
+            line-height: 30px;
+            text-align: center;
+            z-index: 1002;
+        }
+
+        .image-modal-arrow {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background-color: rgba(30, 30, 30, 0.7);
+            color: white;
+            border: 1px solid #555;
+            font-size: 2rem;
+            cursor: pointer;
+            z-index: 1001;
+            user-select: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.3s ease;
+        }
+
+        .image-modal-arrow:hover {
+            background-color: rgba(0, 0, 0, 0.8);
+        }
+
+        .image-modal-arrow.prev {
+            left: -70px;
+        }
+
+        .image-modal-arrow.next {
+            right: -70px;
+        }
+
+        @media (max-width: 768px) {
+            .image-modal-arrow {
+                width: 40px;
+                height: 40px;
+                font-size: 1.5rem;
+            }
+
+            .image-modal-arrow.prev {
+                left: 5px;
+            }
+
+            .image-modal-arrow.next {
+                right: 5px;
+            }
+        }
+    </style>
 </head>
 
 <body>
     <div class="container">
         <div class="header">
-            <div class="header-left">
-                <h1>AI Image Generator</h1>
-            </div>
+            <h1>AI Image Generator</h1>
             <div class="nav-buttons">
-                <a href="/home/home.html">Home</a>
+                <a href="home/home.html">Home</a>
             </div>
         </div>
 
@@ -44,17 +472,15 @@
                         <option value="vintage">Vintage</option>
                     </select>
                 </div>
-
                 <div class="control-group">
                     <label for="resolution">Resolution</label>
                     <select id="resolution" class="control-input">
                         <option value="512x512">512 × 512</option>
                         <option value="768x768">768 × 768</option>
-                        <option value="1024x1024">1024 × 1024</option>
+                        <option value="1024x1024" selected>1024 × 1024</option>
                         <option value="1536x1024">1536 × 1024</option>
                     </select>
                 </div>
-
                 <div class="control-group">
                     <label for="quality">Quality</label>
                     <select id="quality" class="control-input">
@@ -63,13 +489,12 @@
                         <option value="ultra">Ultra</option>
                     </select>
                 </div>
-
                 <div class="control-group">
                     <label for="count">Number of Images</label>
                     <select id="count" class="control-input">
                         <option value="1">1 Image</option>
                         <option value="2">2 Images</option>
-                        <option value="4">4 Images</option>
+                        <option value="4" selected>4 Images</option>
                     </select>
                 </div>
             </div>
@@ -93,7 +518,7 @@
                             d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z" />
                     </svg>
                     <p>Your generated images will appear here</p>
-                    <p style="font-size: 0.8rem; margin-top: 0.5rem;">Enter a prompt above and click "Generate Images"
+                    <p style="font-size: 0.8rem; margin-top: 0.5rem;">Click here for a random prompt and hit "Generate"
                     </p>
                 </div>
             </div>
@@ -113,8 +538,7 @@
 
         let isGenerating = false;
 
-        // --- SUPABASE SETUP START ---
-        // ❗️ Replace with your Supabase URL and Anon Key
+        // --- SUPABASE SETUP ---
         const SUPABASE_URL = 'https://hehfnsaoibkvwdolcfkg.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhlaGZuc2FvaWJrdndkb2xjZmtnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgxOTc5MDUsImV4cCI6MjA3Mzc3MzkwNX0.aDpemN2HIGpORC-tZiQp0iIqXv7L4tO8zXvDCjygvbs';
 
@@ -124,11 +548,8 @@
         } else {
             console.warn("Supabase credentials not set. Saving and history features are disabled.");
         }
-        // --- SUPABASE SETUP END ---
-
 
         generateBtn.addEventListener('click', generateAndUploadImages);
-
         promptInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
@@ -136,7 +557,6 @@
             }
         });
 
-        // --- Load history on page start ---
         document.addEventListener('DOMContentLoaded', loadHistory);
 
         async function generateAndUploadImages() {
@@ -145,11 +565,10 @@
                 showStatusMessage('error', 'Please enter a description for your image.');
                 return;
             }
-            // --- ADDED: Save the prompt to the new table immediately ---
             savePrompt(prompt);
-            
+
             if (isGenerating || !supabase) {
-                if(!supabase) showStatusMessage('error', 'Supabase is not configured.');
+                if (!supabase) showStatusMessage('error', 'Supabase is not configured.');
                 return;
             };
 
@@ -157,39 +576,39 @@
             generateBtn.disabled = true;
             loadingSpinner.style.display = 'inline-block';
             btnText.textContent = 'Generating...';
-            resultsDiv.innerHTML = ''; // Clear previous results
-            
+            resultsDiv.innerHTML = '<div class="image-grid"></div>'; // Clear and set up grid
+
             const imageCount = parseInt(countSelect.value);
             const resolution = resolutionSelect.value;
             const style = styleSelect.value;
             const quality = qualitySelect.value;
-            
-            const imageGrid = document.createElement('div');
-            imageGrid.className = 'image-grid';
-            resultsDiv.appendChild(imageGrid);
+
+            const imageGrid = resultsDiv.querySelector('.image-grid');
 
             const promises = [];
             for (let i = 0; i < imageCount; i++) {
                 promises.push(processImage(prompt, resolution, style, quality, i, imageGrid));
             }
 
-            await Promise.all(promises);
-
-            isGenerating = false;
-            generateBtn.disabled = false;
-            loadingSpinner.style.display = 'none';
-            btnText.textContent = 'Generate Images';
-            showStatusMessage('success', `Successfully generated and saved ${imageCount} image${imageCount > 1 ? 's' : ''}!`);
+            try {
+                await Promise.all(promises);
+                showStatusMessage('success', `Successfully generated and saved ${imageCount} image${imageCount > 1 ? 's' : ''}!`);
+            } catch (error) {
+                console.error('An error occurred during image generation:', error);
+                showStatusMessage('error', 'An error occurred. Not all images may have been generated.');
+            } finally {
+                isGenerating = false;
+                generateBtn.disabled = false;
+                loadingSpinner.style.display = 'none';
+                btnText.textContent = 'Generate Images';
+            }
         }
-        
-        // --- NEW: Processes a single image (generate, upload, display) ---
+
         async function processImage(prompt, resolution, style, quality, index, gridContainer) {
-             try {
-                showStatusMessage('info', `Generating image ${index + 1}...`);
-                const enhancedPrompt = `${prompt}, ${style} style, high quality, detailed`;
+            try {
+                const enhancedPrompt = `${prompt}, ${style} style, ${quality} quality`;
                 const pollutionsUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(enhancedPrompt)}?width=${resolution.split('x')[0]}&height=${resolution.split('x')[1]}&seed=${Date.now() + index}&nologo=true`;
 
-                showStatusMessage('info', `Uploading image ${index + 1} to storage...`);
                 const supabaseUrl = await uploadImageToSupabase(pollutionsUrl, prompt);
 
                 if (supabaseUrl) {
@@ -200,106 +619,84 @@
                         resolution: resolution,
                         quality: quality
                     });
-                    const imageCard = createImageCard(prompt, supabaseUrl, resolution, style, quality);
+                    const imageCard = createImageCard({ prompt, image_url: supabaseUrl, resolution, style, quality });
                     gridContainer.appendChild(imageCard);
+                } else {
+                    throw new Error('Failed to get Supabase URL');
                 }
             } catch (error) {
-                console.error('Failed to process image:', error);
-                showStatusMessage('error', `Failed to process image ${index + 1}.`);
+                console.error(`Failed to process image ${index + 1}:`, error);
+                const errorCard = document.createElement('div');
+                errorCard.className = 'image-card';
+                errorCard.innerHTML = `<div class="image-info" style="color: var(--error-color); text-align: center;">Failed to generate image ${index + 1}</div>`;
+                gridContainer.appendChild(errorCard);
             }
         }
 
-        // --- NEW: Uploads image from a URL to Supabase bucket ---
         async function uploadImageToSupabase(imageUrl, prompt) {
             try {
-                // Fetch the image from the external URL
                 const response = await fetch(imageUrl);
                 if (!response.ok) throw new Error('Failed to fetch image from source.');
                 const imageBlob = await response.blob();
 
-                // Create a unique file name
                 const fileName = `generated/${Date.now()}-${prompt.slice(0, 20).replace(/[^a-zA-Z0-9]/g, '-')}.jpg`;
-                
-                // Upload to Supabase Storage
+
                 const { data, error: uploadError } = await supabase.storage
                     .from('wike') // Your bucket name
-                    .upload(fileName, imageBlob, {
-                        cacheControl: '3600',
-                        upsert: false,
-                    });
+                    .upload(fileName, imageBlob, { cacheControl: '3600', upsert: false });
 
                 if (uploadError) throw uploadError;
 
-                // Get the public URL of the uploaded file
                 const { data: { publicUrl } } = supabase.storage
                     .from('wike') // Your bucket name
                     .getPublicUrl(data.path);
-                
+
                 return publicUrl;
             } catch (error) {
                 console.error('Error uploading image to Supabase:', error.message);
-                showStatusMessage('error', 'Could not upload image to bucket.');
                 return null;
             }
         }
 
-
-        function createImageCard(prompt, imageUrl, resolution, style, quality) {
+        function createImageCard(item) {
             const imageCard = document.createElement('div');
             imageCard.className = 'image-card';
             imageCard.innerHTML = `
-                <div class="image-container" style="position: relative; overflow: hidden;">
-                    <img src="${imageUrl}"
-                         alt="Generated image: ${prompt}"
-                         style="width: 100%; height: 300px; object-fit: cover; border-radius: 8px 8px 0 0; transition: transform 0.3s ease, opacity 0.5s ease;"
-                         onload="this.style.opacity='1'"
-                         onerror="this.parentElement.innerHTML='<div class=\\'image-placeholder\\'>Failed to load image</div>'"
+                <div class="image-container">
+                    <img src="${item.image_url}"
+                         alt="Generated image: ${item.prompt}"
                          loading="lazy">
-                    <div class="image-overlay" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); opacity: 0; transition: opacity 0.3s ease; display: flex; align-items: center; justify-content: center; color: white; font-size: 0.9rem; cursor: pointer;" onclick="openImageModal('${imageUrl}', '${prompt}')">
-                        Click to view full size
-                    </div>
+                    <div class="image-overlay">Click to view</div>
                 </div>
                 <div class="image-info">
-                    <div class="image-prompt">"${prompt}"</div>
+                    <div class="image-prompt">"${item.prompt}"</div>
                     <div class="image-details">
-                        <span>${resolution}</span>
-                        <span>${style} style</span>
-                        <span>${quality} quality</span>
+                        <span>${item.resolution}</span>
+                        <span>${item.style}</span>
+                        <span>${item.quality}</span>
                     </div>
-                    <div style="margin-top: 1rem; display: flex; gap: 0.5rem;">
-                        <button onclick="downloadImage('${imageUrl}', '${prompt.substring(0, 30)}')"
-                                style="flex: 1; padding: 0.5rem; background: #4a9eff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">
-                            Download
-                        </button>
-                    </div>
+                    <button class="download-btn">Download</button>
                 </div>
             `;
-            imageCard.addEventListener('mouseenter', () => imageCard.querySelector('.image-overlay').style.opacity = '1');
-            imageCard.addEventListener('mouseleave', () => imageCard.querySelector('.image-overlay').style.opacity = '0');
+            imageCard.querySelector('.image-container').addEventListener('click', () => openImageModal(item.image_url, item.prompt));
+            imageCard.querySelector('.download-btn').addEventListener('click', () => downloadImage(item.image_url, item.prompt.substring(0, 30)));
             return imageCard;
         }
 
-
         function showStatusMessage(type, message) {
-            const container = document.querySelector('.results-section');
+            const container = document.querySelector('.container');
             const existingMessage = container.querySelector('.status-message');
-            if (existingMessage) {
-                existingMessage.remove();
-            }
+            if (existingMessage) existingMessage.remove();
 
             const statusDiv = document.createElement('div');
             statusDiv.className = `status-message status-${type}`;
             statusDiv.textContent = message;
 
-            container.insertBefore(statusDiv, container.firstChild.nextSibling);
+            container.insertBefore(statusDiv, document.querySelector('.generator-section'));
 
-            if (type === 'success' || type === 'info') {
-                setTimeout(() => {
-                    if (statusDiv.parentNode) {
-                        statusDiv.remove();
-                    }
-                }, 5000);
-            }
+            setTimeout(() => {
+                if (statusDiv.parentNode) statusDiv.remove();
+            }, 5000);
         }
 
         const samplePrompts = [
@@ -331,28 +728,86 @@
                 URL.revokeObjectURL(blobUrl);
             } catch (err) {
                 console.error(err);
-                alert('Failed to download image.');
+                showStatusMessage('error', 'Failed to download image.');
             }
         }
 
+        // --- UPDATED: Image Modal with Arrow Navigation ---
         function openImageModal(imageUrl, prompt) {
+            // Get all currently visible images from the grid
+            const allImageCards = Array.from(document.querySelectorAll('.image-grid .image-card'));
+            const galleryData = allImageCards.map(card => {
+                const img = card.querySelector('img');
+                const promptEl = card.querySelector('.image-prompt');
+                return {
+                    src: img ? img.src : '',
+                    prompt: promptEl ? promptEl.textContent : ''
+                };
+            }).filter(item => item.src); // Filter out any failed cards
+
+            let currentIndex = galleryData.findIndex(item => item.src === imageUrl);
+
             const modal = document.createElement('div');
-            modal.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: flex; align-items: center; justify-content: center; z-index: 1000; cursor: pointer;`;
-            modal.innerHTML = `<div style="max-width: 90vw; max-height: 90vh; position: relative;"><img src="${imageUrl}" style="max-width: 100%; max-height: 90vh; object-fit: contain; border-radius: 8px;"><button onclick="this.parentElement.parentElement.remove()" style="position: absolute; top: -35px; right: -15px; background: #ff4444; color: white; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; font-size: 1.2rem; line-height: 30px;">×</button></div>`;
-            modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+            modal.className = 'image-modal';
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <button class="close-modal-btn">&times;</button>
+                    <img src="" alt="">
+                    <p class="modal-prompt"></p>
+                    <button class="image-modal-arrow prev">&lt;</button>
+                    <button class="image-modal-arrow next">&gt;</button>
+                </div>
+            `;
             document.body.appendChild(modal);
+
+            const modalContent = modal.querySelector('.modal-content');
+            const prevBtn = modal.querySelector('.prev');
+            const nextBtn = modal.querySelector('.next');
+            const modalImg = modal.querySelector('img');
+            const modalPrompt = modal.querySelector('.modal-prompt');
+            const closeBtn = modal.querySelector('.close-modal-btn');
+
+            function updateModalView() {
+                if (currentIndex < 0 || currentIndex >= galleryData.length) return;
+                const currentItem = galleryData[currentIndex];
+                modalImg.src = currentItem.src;
+                modalImg.alt = currentItem.prompt;
+                modalPrompt.textContent = currentItem.prompt;
+                prevBtn.style.display = currentIndex === 0 ? 'none' : 'flex';
+                nextBtn.style.display = currentIndex === galleryData.length - 1 ? 'none' : 'flex';
+            }
+
+            prevBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (currentIndex > 0) {
+                    currentIndex--;
+                    updateModalView();
+                }
+            });
+
+            nextBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (currentIndex < galleryData.length - 1) {
+                    currentIndex++;
+                    updateModalView();
+                }
+            });
+
+            const closeModal = () => modal.remove();
+            modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+            closeBtn.addEventListener('click', closeModal);
+            modalContent.addEventListener('click', (e) => e.stopPropagation());
+
+            updateModalView(); // Initial view
         }
 
-        // --- NEW FUNCTION: Saves the entered prompt to the 'prompts' table ---
         async function savePrompt(promptText) {
             if (!supabase) return;
             try {
                 const { error } = await supabase.from('prompts').insert([{ prompt_text: promptText }]);
                 if (error) throw error;
-                console.log('Prompt saved successfully.');
             } catch (error) {
-                console.error('Error saving prompt to Supabase:', error.message);
-                // We don't show an error to the user for this, as it's a background task.
+                console.error('Error saving prompt:', error.message);
             }
         }
 
@@ -362,39 +817,35 @@
                 const { error } = await supabase.from('generations').insert([data]);
                 if (error) throw error;
             } catch (error) {
-                console.error('Error saving generation to Supabase:', error.message);
+                console.error('Error saving generation:', error.message);
             }
         }
 
         async function loadHistory() {
             if (!supabase) return;
             resultsDiv.innerHTML = '';
-            showStatusMessage('info', 'Loading previous creations...');
 
             try {
                 const { data, error } = await supabase.from('generations').select('*').order('created_at', { ascending: false }).limit(8);
                 if (error) throw error;
-                const loadingMessage = document.querySelector('.status-message');
-                if (loadingMessage) loadingMessage.remove();
 
                 if (data && data.length > 0) {
                     const imageGrid = document.createElement('div');
                     imageGrid.className = 'image-grid';
                     resultsDiv.appendChild(imageGrid);
                     data.forEach(item => {
-                        const imageCard = createImageCard(item.prompt, item.image_url, item.resolution, item.style, item.quality);
+                        const imageCard = createImageCard(item);
                         imageGrid.appendChild(imageCard);
                     });
                 } else {
                     resultsDiv.innerHTML = `<div class="placeholder"><svg class="placeholder-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z" /></svg><p>No history found. Generate some images to start!</p></div>`;
                 }
             } catch (error) {
-                console.error('Error loading history from Supabase:', error.message);
+                console.error('Error loading history:', error.message);
                 showStatusMessage('error', 'Could not load image history.');
             }
         }
     </script>
 </body>
+
 </html>
-
-

@@ -389,7 +389,7 @@
       const { error } = await client.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: window.location.origin + 'home/home.html',
+          redirectTo: window.location.origin + '/home/home.html',
           queryParams: { prompt: "select_account" }
         }
       });

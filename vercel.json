@@ -1,0 +1,15 @@
+{
+  "redirects": [
+    { "source": "/", "destination": "/wike-login/index.html", "permanent": true }
+  ],
+  "rewrites": [
+    { "source": "/home", "destination": "/home/home.html" },
+    { "source": "/resume", "destination": "/resume/resume.html" },
+    { "source": "/app", "destination": "/app/app.html" },
+    { "source": "/whiteboard", "destination": "/editor/whiteboard/diagram.html" },
+    { "source": "/qr", "destination": "/qr-code/qr.html" },
+    { "source": "/templates", "destination": "/templtes/temp.html" },
+    { "source": "/ai-img", "destination": "/ai-img/img.html" },
+    { "source": "/login", "destination": "/wike-login/index.html" }
+  ]
+}

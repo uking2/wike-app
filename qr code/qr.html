@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WIKE Premium QR Code Generator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Supabase Client Library -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <style>
+        /* --- General & Theming --- */
+        body {
+            font-family: 'Inter', sans-serif;
+            transition: background-color 0.5s, color 0.5s;
+            overflow-x: hidden; /* Prevent horizontal scroll */
+        }
+
+        /* --- Animated Gradient Background --- */
+        body {
+            background: linear-gradient(-45deg, #eef2f3, #e0eafc, #d8e2f8, #c7d2fe);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+        }
+
+        .dark body {
+            background: linear-gradient(-45deg, #0d1117, #161b22, #0d1117, #1a222e);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+            color: #c9d1d9;
+        }
+
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* --- Premium Card Styling (Glassmorphism & Glow) --- */
+        .premium-card {
+            transition: background-color 0.3s, border-color 0.3s, box-shadow 0.3s;
+            position: relative;
+            z-index: 1;
+        }
+        
+        /* Light Mode Card */
+        .light .premium-card {
+             background-color: rgba(255, 255, 255, 0.85);
+             backdrop-filter: blur(10px);
+             -webkit-backdrop-filter: blur(10px);
+             box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+             border: 1px solid rgba(255, 255, 255, 0.18);
+        }
+
+        /* Dark Mode Card */
+        .dark .premium-card {
+            background-color: rgba(22, 27, 34, 0.6); /* Semi-transparent background */
+            backdrop-filter: blur(16px); /* Frosted glass effect */
+            -webkit-backdrop-filter: blur(16px); /* For Safari compatibility */
+            border: 1px solid rgba(75, 85, 99, 0.3);
+            box-shadow: 0 0 35px rgba(0, 0, 0, 0.2), 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        /* --- Button & Input Styling --- */
+        .premium-button {
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            z-index: 1;
+        }
+        
+        .premium-button:before {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 0%;
+            height: 100%;
+            background-color: rgba(255,255,255,0.2);
+            transition: all 0.3s;
+            z-index: -1;
+        }
+
+        .premium-button:hover {
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .premium-button:hover:before {
+            width: 100%;
+        }
+        
+        .dark .premium-button:hover {
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+        }
+
+        .premium-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+            box-shadow: none !important;
+        }
+        .premium-button:disabled:hover::before {
+            width: 0;
+        }
+
+        .input-glow:focus {
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
+        }
+        
+        .dark .input-glow:focus {
+            box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.6);
+        }
+
+        /* --- QR Code Reveal Animation --- */
+        @keyframes futuristicReveal {
+            from {
+                opacity: 0;
+                transform: scale(0.9) perspective(1000px) rotateY(15deg);
+                filter: brightness(1.5) blur(3px);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1) perspective(1000px) rotateY(0deg);
+                filter: brightness(1) blur(0);
+            }
+        }
+        .qr-code-animated {
+            animation: futuristicReveal 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+        }
+
+        /* --- Pulsar Loading Spinner --- */
+        .spinner {
+            width: 40px;
+            height: 40px;
+            position: relative;
+        }
+        .spinner::before, .spinner::after {
+            content: '';
+            position: absolute;
+            border-radius: 50%;
+        }
+        .spinner::before {
+            width: 100%;
+            height: 100%;
+            background-color: #3b82f6;
+            animation: pulse 1.5s infinite cubic-bezier(0.215, 0.610, 0.355, 1);
+        }
+        .spinner::after {
+            width: 100%;
+            height: 100%;
+            border: 2px solid #3b82f6;
+            animation: ripple 1.5s infinite cubic-bezier(0.215, 0.610, 0.355, 1);
+        }
+        .dark .spinner::before { background-color: #60a5fa; }
+        .dark .spinner::after { border-color: #60a5fa; }
+
+        @keyframes pulse {
+            0% { transform: scale(0.4); }
+            50% { transform: scale(0.2); }
+            100% { transform: scale(0.4); }
+        }
+        @keyframes ripple {
+            from { transform: scale(0.2); opacity: 1; }
+            to { transform: scale(1.2); opacity: 0; }
+        }
+        
+        /* --- Notification Toast --- */
+        #notification {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translate(-50%, 100%);
+            padding: 12px 24px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 500;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            transition: transform 0.4s ease-in-out, opacity 0.4s ease-in-out;
+            opacity: 0;
+            z-index: 100;
+            pointer-events: none;
+        }
+        #notification.show {
+            transform: translate(-50%, 0);
+            opacity: 1;
+        }
+        #notification.success {
+            background-color: #22c55e; /* green-500 */
+        }
+        #notification.error {
+            background-color: #ef4444; /* red-500 */
+        }
+
+    </style>
+</head>
+<body class="flex flex-col min-h-screen items-center p-4 pt-8 sm:pt-12">
+
+    <header class="w-full max-w-2xl mb-6">
+         <a href="/home/home.html" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition-all duration-200 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 premium-button inline-flex items-center">
+             <i class="fas fa-home mr-2"></i> Home
+        </a>
+    </header>
+    <!-- Main Application Card -->
+    <div class="bg-white/50 rounded-2xl shadow-xl p-6 sm:p-8 w-full max-w-2xl premium-card">
+        
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-3xl sm:text-4xl font-bold text-gray-800 dark:text-white">
+                <i class="fas fa-qrcode text-blue-500 dark:text-blue-400"></i> WIKE QR Generator
+            </h1>
+            <p class="text-gray-500 dark:text-gray-400 mt-2">Instantly create and share QR codes.</p>
+        </div>
+
+        <!-- Input Section -->
+        <div class="mb-6">
+            <label for="qrInput" class="block text-gray-700 dark:text-gray-300 text-sm font-medium mb-2">Enter Text or URL</label>
+            <div class="relative">
+                 <i class="fa-solid fa-link absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                <input type="text" id="qrInput" placeholder="https://example.com"
+                       class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none transition-all duration-200 text-gray-800 bg-white/70 dark:bg-gray-800/70 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white input-glow">
+            </div>
+        </div>
+
+        <!-- Generate Button -->
+        <button id="generateBtn"
+                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 premium-button">
+            <i class="fas fa-magic mr-2"></i> Generate QR Code
+        </button>
+
+        <!-- QR Code Display Area -->
+        <div class="mt-8 text-center">
+            <div id="qrCodeContainer" class="flex justify-center items-center p-4 border border-gray-300/50 dark:border-gray-700/50 rounded-lg bg-gray-50/50 dark:bg-gray-900/50 min-h-[220px] transition-colors duration-300 relative overflow-hidden">
+                <img id="qrCodeImage" src="" alt="Generated QR Code" class="max-w-full h-auto rounded-md" style="display: none;">
+                <p id="qrPlaceholder" class="text-gray-500 dark:text-gray-400">Your QR code will appear here</p>
+                <div id="loadingSpinner" class="hidden absolute inset-0 flex items-center justify-center bg-gray-50/80 dark:bg-gray-900/80 rounded-lg">
+                    <div class="spinner"></div>
+                </div>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="flex flex-col sm:flex-row justify-center gap-4 mt-4">
+                <button id="downloadBtn"
+                        class="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 premium-button"
+                        disabled>
+                    <i class="fas fa-download mr-2"></i> Download & Save
+                </button>
+                <button id="shareBtn"
+                        class="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-4 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 premium-button"
+                        disabled>
+                    <i class="fas fa-share-alt mr-2"></i> Share
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Theme Toggle -->
+    <div class="absolute top-5 right-5">
+        <button id="darkModeToggle" title="Toggle Dark Mode"
+                class="relative inline-flex h-8 w-14 items-center rounded-full bg-gray-300 dark:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800">
+            <span class="sr-only">Toggle dark mode</span>
+             <span class="absolute left-1.5 text-yellow-500 dark:text-gray-500 transition-opacity">
+                 <i class="fas fa-sun"></i>
+             </span>
+             <span class="absolute right-1.5 text-gray-500 dark:text-slate-300 transition-opacity">
+                 <i class="fas fa-moon"></i>
+             </span>
+            <span id="darkModeIndicator"
+                  class="inline-block h-6 w-6 transform rounded-full bg-white transition-transform translate-x-1 dark:translate-x-7"></span>
+        </button>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="notification"></div>
+
+
+    <script>
+        // --- Supabase Client Setup ---
+        // =================================================================================
+        // IMPORTANT: Replace with your actual Supabase Project URL and Public Anon Key
+        // =================================================================================
+        const SUPABASE_URL = 'https://hehfnsaoibkvwdolcfkg.supabase.co'; 
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhlaGZuc2FvaWJrdndkb2xjZmtnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgxOTc5MDUsImV4cCI6MjA3Mzc3MzkwNX0.aDpemN2HIGpORC-tZiQp0iIqXv7L4tO8zXvDCjygvbs';
+        // =================================================================================
+        
+        let supabaseClient;
+        if (SUPABASE_URL !== 'YOUR_SUPABASE_URL' && SUPABASE_ANON_KEY !== 'YOUR_SUPABASE_ANON_KEY') {
+            const { createClient } = supabase;
+            supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        } else {
+            console.warn('Supabase credentials are placeholders. Please update them in the script to enable saving to bucket.');
+        }
+
+
+        // --- DOM Element References ---
+        const qrInput = document.getElementById('qrInput');
+        const generateBtn = document.getElementById('generateBtn');
+        const qrCodeImage = document.getElementById('qrCodeImage');
+        const qrPlaceholder = document.getElementById('qrPlaceholder');
+        const loadingSpinner = document.getElementById('loadingSpinner');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const shareBtn = document.getElementById('shareBtn');
+        const darkModeToggle = document.getElementById('darkModeToggle');
+        const darkModeIndicator = document.getElementById('darkModeIndicator');
+        const htmlElement = document.documentElement;
+        const notification = document.getElementById('notification');
+
+        // --- State Variable ---
+        let currentQrCodeBlob = null; // Holds the image data (blob) of the current QR code
+
+
+        // --- Core Functions ---
+        
+        /**
+         * Generates the QR code by fetching it as a blob.
+         */
+        async function generateQRCode() {
+            const text = qrInput.value.trim();
+
+            // Reset UI and state
+            qrCodeImage.style.display = 'none';
+            qrCodeImage.classList.remove('qr-code-animated');
+            qrPlaceholder.style.display = 'none';
+            loadingSpinner.style.display = 'flex';
+            downloadBtn.disabled = true;
+            shareBtn.disabled = true;
+            currentQrCodeBlob = null;
+            if (qrCodeImage.src) {
+                URL.revokeObjectURL(qrCodeImage.src); // Clean up old object URL
+            }
+
+            if (!text) {
+                loadingSpinner.style.display = 'none';
+                qrPlaceholder.textContent = "Please enter text or a URL to generate a QR code.";
+                qrPlaceholder.style.display = 'block';
+                return;
+            }
+
+            try {
+                const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(text)}`;
+                const response = await fetch(qrApiUrl);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const blob = await response.blob();
+                currentQrCodeBlob = blob; // Store the blob for later use
+
+                const objectUrl = URL.createObjectURL(blob);
+                qrCodeImage.src = objectUrl;
+                
+                qrCodeImage.style.display = 'block';
+                qrCodeImage.classList.add('qr-code-animated');
+                downloadBtn.disabled = false;
+                if (navigator.share) {
+                    shareBtn.disabled = false;
+                }
+
+            } catch (error) {
+                console.error("Failed to fetch QR code:", error);
+                qrPlaceholder.textContent = "Error: Could not create QR code.";
+                qrPlaceholder.style.display = 'block';
+            } finally {
+                loadingSpinner.style.display = 'none';
+            }
+        }
+        
+        /**
+         * Downloads the QR code, uploads it to Supabase Storage,
+         * and saves the prompt and image URL to the Supabase database.
+         */
+        async function downloadAndSaveQRCode() {
+            if (!currentQrCodeBlob) {
+                showNotification("No QR code data available to save.", true);
+                return;
+            }
+             if (!supabaseClient) {
+                console.error("Supabase client not initialized. Cannot save.");
+                showNotification("Supabase is not configured.", true);
+                return;
+            }
+
+            downloadBtn.disabled = true;
+            downloadBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Processing...';
+
+            try {
+                // Part 1: Trigger download to user's PC
+                const url = URL.createObjectURL(currentQrCodeBlob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `wike_qrcode_${Date.now()}.png`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url); // Clean up
+
+                // Part 2: Upload to Supabase Storage in the 'qrcode' folder
+                const promptText = qrInput.value.trim();
+                const fileName = `qrcode-${Date.now()}.png`;
+                const filePath = `qrcode/${fileName}`; // Define the full path including the folder
+
+                const { data: uploadData, error: uploadError } = await supabaseClient
+                    .storage
+                    .from('wike')
+                    .upload(filePath, currentQrCodeBlob); // Use the full path for upload
+
+                if (uploadError) {
+                    throw uploadError;
+                }
+
+                // Part 3: Get the public URL using the correct file path
+                const { data: urlData } = supabaseClient.storage.from('wike').getPublicUrl(filePath); // Use the same full path
+                const imageUrl = urlData.publicUrl;
+
+                // Part 4: Insert record into the database
+                const { error: dbError } = await supabaseClient
+                    .from('qrcode') // Use 'qrcode' table
+                    .insert([
+                        { prompt: promptText, image_url: imageUrl } // Use new columns
+                    ]);
+
+                if (dbError) {
+                    throw dbError;
+                }
+
+                showNotification("Successfully downloaded and saved!");
+
+            } catch (err) {
+                console.error("Download or save process failed:", err);
+                showNotification(`Save Failed: ${err.message}`, true);
+            } finally {
+                downloadBtn.disabled = false;
+                downloadBtn.innerHTML = '<i class="fas fa-download mr-2"></i> Download & Save';
+            }
+        }
+
+
+        /**
+         * Shares the QR code using the Web Share API.
+         */
+        async function shareQRCode() {
+            if (!currentQrCodeBlob) {
+                showNotification("No QR code generated to share.", true);
+                return;
+            }
+
+            const file = new File([currentQrCodeBlob], 'wike_qrcode.png', { type: 'image/png' });
+            const text = qrInput.value.trim();
+
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                try {
+                    await navigator.share({
+                        files: [file],
+                        title: 'My WIKE QR Code',
+                        text: `Scan this QR code for: ${text}`,
+                    });
+                } catch (error) {
+                    console.error('Error sharing QR code:', error);
+                }
+            } else {
+                showNotification("Sharing not supported on this browser.", true);
+            }
+        }
+
+        // --- UI Functions ---
+        
+        /**
+         * Displays a notification message.
+         * @param {string} message The text to display.
+         * @param {boolean} isError If true, shows a red error toast.
+         */
+        function showNotification(message, isError = false) {
+            notification.textContent = message;
+            notification.className = isError ? 'error' : 'success';
+            notification.classList.add('show');
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+
+        function updateDarkMode(isDark) {
+            htmlElement.classList.toggle('dark', isDark);
+            htmlElement.classList.toggle('light', !isDark);
+        }
+
+        darkModeToggle.addEventListener('click', () => {
+            const isDark = !htmlElement.classList.contains('dark');
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+            updateDarkMode(isDark);
+        });
+
+        // --- Event Listeners ---
+        generateBtn.addEventListener('click', generateQRCode);
+        downloadBtn.addEventListener('click', downloadAndSaveQRCode);
+        shareBtn.addEventListener('click', shareQRCode);
+        qrInput.addEventListener('keypress', (event) => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                generateQRCode();
+            }
+        });
+
+        // --- Initialization ---
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedTheme = localStorage.getItem('theme') || 'dark'; // Default to dark
+            updateDarkMode(savedTheme === 'dark');
+            if (!navigator.share) {
+                shareBtn.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>

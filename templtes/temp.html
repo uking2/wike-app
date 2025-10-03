@@ -1,0 +1,1653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PixelCraft - Canva-like Editor</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Fabric.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.0/fabric.min.js"></script>
+    
+    <!-- jsPDF for PDF Export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    
+    <!-- Supabase JS -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            colors: {
+              primary: {"50":"#eff6ff","100":"#dbeafe","200":"#bfdbfe","300":"#93c5fd","400":"#60a5fa","500":"#3b82f6","600":"#2563eb","700":"#1d4ed8","800":"#1e40af","900":"#1e3a8a","950":"#172554"}
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .hidden { display: none; }
+        .property-panel input, .property-panel select {
+            width: 100%;
+            padding: 4px 8px;
+            border-radius: 4px;
+            border: 1px solid #d1d5db;
+            background-color: #f9fafb;
+        }
+        .property-panel input[type="color"] {
+            padding: 0;
+            height: 30px;
+        }
+        .dark .property-panel input, .dark .property-panel select {
+            background-color: #374151;
+            border-color: #4b5563;
+            color: #e5e7eb;
+        }
+        canvas {
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .template-card { transition: transform 0.2s, box-shadow 0.2s; }
+        .template-card:hover { transform: translateY(-5px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); }
+        .editor-tool-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            padding: 8px 4px;
+            border-radius: 8px;
+            transition: background-color 0.2s;
+        }
+        .editor-tool-btn:hover { background-color: #e5e7eb; }
+        .dark .editor-tool-btn:hover { background-color: #374151; }
+        .editor-tool-btn.active { background-color: #dbeafe; }
+        .dark .editor-tool-btn.active { background-color: #1e40af; }
+        
+        /* Toast Notification Styles */
+        .toast {
+            padding: 12px 20px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            font-size: 14px;
+            font-weight: 500;
+            color: white;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            opacity: 0;
+            transform: translateX(100%);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+        .toast.show {
+            opacity: 1;
+            transform: translateX(0);
+        }
+        .toast.success { background-color: #22c55e; } /* green-500 */
+        .toast.error { background-color: #ef4444; } /* red-500 */
+        .toast.info { background-color: #3b82f6; } /* blue-500 */
+    </style>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200">
+
+    <!-- App Container -->
+    <div id="app" class="h-screen w-screen flex flex-col">
+
+        <!-- ==================================================== -->
+        <!-- ================== HOMEPAGE VIEW =================== -->
+        <!-- ==================================================== -->
+        <main id="homepage" class="flex-grow overflow-y-auto">
+            <header class="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700">
+                <div class="container mx-auto flex justify-between items-center">
+                    <div class="flex items-center gap-2">
+                        <svg class="w-8 h-8 text-primary-600" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21 15-6-6-6 6"/><path d="m3 15 6-6 6 6"/><path d="m12 21-6-6 6-6 6 6-6 6Z"/></svg>
+                        <h1 class="text-2xl font-bold">Wike</h1>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <a href="../app/app.html" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
+                            <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
+                            Back
+                        </a>
+                        <a href="../home/home.html" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                            Home
+                        </a>
+                        <button id="theme-toggle-homepage" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
+                            <!-- Icons will be injected by JS -->
+                        </button>
+                    </div>
+                </div>
+            </header>
+            
+            <section class="container mx-auto p-4 sm:p-8">
+                <div class="text-center mb-12">
+                    <h2 class="text-4xl md:text-5xl font-extrabold mb-4">Create your next design</h2>
+                    <p class="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">Choose from a wide range of professional templates to start your project. Fully customizable, easy to use, and free.</p>
+                </div>
+
+                <div class="mb-12 max-w-2xl mx-auto">
+                    <div class="relative">
+                        <input type="search" id="search-templates" placeholder="Search for templates (e.g., resume, banner...)" class="w-full p-4 pl-12 rounded-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-primary-500 focus:outline-none">
+                        <div class="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
+                             <svg class="w-5 h-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Template Gallery -->
+                <div id="template-gallery" class="space-y-8">
+                    <!-- Template categories and cards will be injected by JS -->
+                </div>
+            </section>
+        </main>
+        
+        <!-- =================================================== -->
+        <!-- ================== EDITOR VIEW ==================== -->
+        <!-- =================================================== -->
+        <main id="editor" class="hidden h-screen w-screen flex flex-col bg-gray-200 dark:bg-gray-800">
+            <!-- Editor Header -->
+            <header class="flex items-center justify-between p-2 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 shadow-sm flex-shrink-0">
+                <div class="flex items-center gap-4">
+                    <button id="back-to-home" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
+                        <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
+                        Home
+                    </button>
+                    <div class="w-px h-6 bg-gray-200 dark:bg-gray-700"></div>
+                    <span id="project-name" class="font-semibold">Untitled Design</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button id="undo-btn" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                        <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v6h6"/><path d="M21 12A9 9 0 0 0 6.42 4.4L3 8"/></svg>
+                    </button>
+                    <button id="redo-btn" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                        <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 3v6h-6"/><path d="M3 12a9 9 0 0 0 15.58 5.6L21 16"/></svg>
+                    </button>
+                    <button id="theme-toggle-editor" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
+                        <!-- Icons will be injected by JS -->
+                    </button>
+                    <div class="w-px h-6 bg-gray-200 dark:bg-gray-700"></div>
+                     <button id="save-project-btn" class="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                        Save
+                    </button>
+                    <div class="relative">
+                        <button id="export-btn" class="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary-600 text-white hover:bg-primary-700">
+                             <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                            Export
+                        </button>
+                        <div id="export-menu" class="hidden absolute right-0 mt-2 w-40 bg-white dark:bg-gray-800 rounded-lg shadow-xl z-10 border border-gray-200 dark:border-gray-700">
+                            <a href="#" class="export-option block px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700" data-format="png">PNG</a>
+                            <a href="#" class="export-option block px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700" data-format="jpeg">JPEG</a>
+                            <a href="#" class="export-option block px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700" data-format="svg">SVG</a>
+                            <a href="#" class="export-option block px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700" data-format="pdf">PDF</a>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Editor Body -->
+            <div class="flex-grow flex overflow-hidden">
+                <!-- Left Toolbar -->
+                <aside class="w-20 bg-white dark:bg-gray-900 p-2 flex flex-col items-center gap-2 border-r border-gray-200 dark:border-gray-700">
+                    <button id="add-text-btn" class="editor-tool-btn" title="Add Text">
+                        <svg class="w-6 h-6 mb-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 6.1H7a4 4 0 0 0-4 4v2a4 4 0 0 0 4 4h10"/><path d="M17 18.1H7"/><path d="M12 12.1v-6"/><path d="m12 18.1-2.5-2.5"/><path d="m12 18.1 2.5-2.5"/></svg>
+                        <span class="text-xs">Text</span>
+                    </button>
+                     <button id="upload-image-btn" class="editor-tool-btn" title="Upload Image">
+                        <svg class="w-6 h-6 mb-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                        <span class="text-xs">Uploads</span>
+                    </button>
+                    <input type="file" id="image-upload-input" class="hidden" accept="image/*">
+                    <button id="change-bg-btn" class="editor-tool-btn" title="Change Background">
+                        <svg class="w-6 h-6 mb-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                        <span class="text-xs">Background</span>
+                    </button>
+                </aside>
+
+                <!-- Canvas Area -->
+                <div class="flex-grow flex items-center justify-center p-4 overflow-auto">
+                    <div id="canvas-wrapper" class="relative">
+                        <canvas id="editor-canvas"></canvas>
+                    </div>
+                </div>
+
+                <!-- Right Properties Panel -->
+                <aside id="properties-panel" class="w-64 bg-white dark:bg-gray-900 p-4 border-l border-gray-200 dark:border-gray-700 overflow-y-auto flex-shrink-0">
+                    <div id="no-selection" class="text-center text-gray-500 mt-8">
+                        <svg class="w-16 h-16 mx-auto mb-4 text-gray-300 dark:text-gray-600" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+                        <h3 class="font-semibold">Select an object to edit its properties.</h3>
+                    </div>
+                    <div id="properties-content" class="hidden space-y-4 property-panel">
+                        <!-- Properties will be dynamically injected here -->
+                    </div>
+                </aside>
+                 <!-- Layers Panel -->
+                <aside id="layers-panel" class="w-60 bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700 flex-shrink-0 flex flex-col">
+                    <div class="p-2 border-b border-gray-200 dark:border-gray-700">
+                        <h3 class="font-semibold text-center">Layers</h3>
+                    </div>
+                    <div id="layers-list" class="flex-grow overflow-y-auto p-2 space-y-2">
+                        <!-- Layer items will be injected here -->
+                    </div>
+                </aside>
+            </div>
+            
+            <!-- Editor Footer -->
+            <footer class="bg-white dark:bg-gray-900 p-1 border-t border-gray-200 dark:border-gray-700 flex justify-end items-center gap-4 flex-shrink-0">
+                 <button id="layers-toggle-btn" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800" title="Toggle Layers Panel">
+                    <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+                </button>
+                <div class="flex items-center gap-2">
+                    <button id="zoom-out-btn" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
+                        <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg>
+                    </button>
+                    <input type="text" id="zoom-level" value="100%" class="w-16 text-center bg-transparent border-none focus:ring-0">
+                    <button id="zoom-in-btn" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
+                        <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><line x1="11" y1="8" x2="11" y2="14"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg>
+                    </button>
+                </div>
+            </footer>
+        </main>
+    </div>
+    
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50"></div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+
+        // --- DOM ELEMENTS ---
+        const homepage = document.getElementById('homepage');
+        const editor = document.getElementById('editor');
+        const backToHomeBtn = document.getElementById('back-to-home');
+        const templateGallery = document.getElementById('template-gallery');
+        const projectNameEl = document.getElementById('project-name');
+        const toastContainer = document.getElementById('toast-container');
+        
+        // Editor tools
+        const addTextBtn = document.getElementById('add-text-btn');
+        const uploadImageBtn = document.getElementById('upload-image-btn');
+        const imageUploadInput = document.getElementById('image-upload-input');
+        const changeBgBtn = document.getElementById('change-bg-btn');
+        const undoBtn = document.getElementById('undo-btn');
+        const redoBtn = document.getElementById('redo-btn');
+        
+        // Properties panel
+        const propertiesPanel = document.getElementById('properties-panel');
+        const noSelectionDiv = document.getElementById('no-selection');
+        const propertiesContentDiv = document.getElementById('properties-content');
+
+        // Layers panel
+        const layersPanel = document.getElementById('layers-panel');
+        const layersToggleBtn = document.getElementById('layers-toggle-btn');
+        const layersList = document.getElementById('layers-list');
+        
+        // Export
+        const exportBtn = document.getElementById('export-btn');
+        const exportMenu = document.getElementById('export-menu');
+
+        // Zoom
+        const zoomInBtn = document.getElementById('zoom-in-btn');
+        const zoomOutBtn = document.getElementById('zoom-out-btn');
+        const zoomLevelInput = document.getElementById('zoom-level');
+        
+        // Theme Toggles
+        const themeToggleHomepage = document.getElementById('theme-toggle-homepage');
+        const themeToggleEditor = document.getElementById('theme-toggle-editor');
+        const sunIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2"></path><path d="M12 20v2"></path><path d="m4.93 4.93 1.41 1.41"></path><path d="m17.66 17.66 1.41 1.41"></path><path d="M2 12h2"></path><path d="M20 12h2"></path><path d="m6.34 17.66-1.41 1.41"></path><path d="m19.07 4.93-1.41 1.41"></path></svg>`;
+        const moonIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path></svg>`;
+
+        
+        // --- STATE MANAGEMENT ---
+        let canvas;
+        let supabaseClient;
+        let stateHistory = [];
+        let historyIndex = -1;
+        let isHistoryAction = false; // Flag to prevent saving state during undo/redo
+
+        // --- SUPABASE INITIALIZATION ---
+        // IMPORTANT: Replace with your actual Supabase URL and Anon Key
+        const SUPABASE_URL = 'https://hehfnsaoibkvwdolcfkg.supabase.co'; 
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhlaGZuc2FvaWJrdndkb2xjZmtnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgxOTc5MDUsImV4cCI6MjA3Mzc3MzkwNX0.aDpemN2HIGpORC-tZiQp0iIqXv7L4tO8zXvDCjygvbs';
+
+        if (!SUPABASE_URL || !SUPABASE_ANON_KEY || SUPABASE_URL === 'YOUR_SUPABASE_URL') {
+            console.warn('Supabase credentials not configured. Upload to storage will be skipped.');
+        } else {
+            supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            console.log('Supabase client initialized.');
+        }
+        
+        // --- UI UTILITIES ---
+        const showToast = (message, type = 'info', duration = 3000) => {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            toastContainer.appendChild(toast);
+
+
+            // Animate in
+            setTimeout(() => {
+                toast.classList.add('show');
+            }, 10);
+
+            // Animate out and remove
+            setTimeout(() => {
+                toast.classList.remove('show');
+                toast.addEventListener('transitionend', () => toast.remove());
+            }, duration);
+        };
+
+
+        // --- THEME SWITCHER ---
+        const initTheme = () => {
+            const isDarkMode = localStorage.getItem('theme') === 'dark';
+            if (isDarkMode) {
+                document.documentElement.classList.add('dark');
+            }
+            updateThemeIcons(isDarkMode);
+        };
+
+        const updateThemeIcons = (isDarkMode) => {
+            themeToggleHomepage.innerHTML = isDarkMode ? sunIcon : moonIcon;
+            themeToggleEditor.innerHTML = isDarkMode ? sunIcon : moonIcon;
+        };
+
+        const toggleTheme = () => {
+            const isDarkMode = document.documentElement.classList.toggle('dark');
+            localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
+            updateThemeIcons(isDarkMode);
+        };
+        
+        [themeToggleHomepage, themeToggleEditor].forEach(btn => btn.addEventListener('click', toggleTheme));
+
+        // --- TEMPLATE DATA (Omitted for brevity, assumed to be the same as provided) ---
+        const templates = [
+             // --- 🎉 Personal & Celebration ---
+             {
+                id: 'birthday-card-v2',
+                name: 'Elegant Birthday Card',
+                category: '🎉 Personal & Celebration',
+                preview: '/images/Elegant_Birthday_Card.png',
+                canvas: { width: 500, height: 700 },
+                objects: [
+                    { type: 'rect', left: 0, top: 0, width: 500, height: 700, fill: '#f1f5f9', selectable: false },
+                    { type: 'rect', left: 25, top: 25, width: 450, height: 650, fill: 'transparent', stroke: '#cbd5e1', strokeWidth: 2, selectable: false },
+                    { type: 'i-text', text: 'Happy', left: 250, top: 150, originX: 'center', fontFamily: 'Georgia', fontSize: 80, fill: '#1e293b', fontStyle: 'italic' },
+                    { type: 'i-text', text: 'Birthday', left: 250, top: 250, originX: 'center', fontFamily: 'Georgia', fontSize: 100, fill: '#1e293b', fontWeight: 'bold' },
+                    { type: 'i-text', text: 'WISHING YOU ALL THE BEST', left: 250, top: 380, originX: 'center', fontFamily: 'Montserrat', fontSize: 18, fill: '#475569', letterSpacing: 200 },
+                    { type: 'path', path: 'M 100 500 Q 250 450 400 500', stroke: '#94a3b8', strokeWidth: 2, fill: 'transparent', selectable: false, },
+                ]
+            },
+            {
+                id: 'invitation-wedding',
+                name: 'Classic Wedding Invitation',
+                category: '🎉 Personal & Celebration',
+                preview: '/images/Classic_Wedding_Invitation.png',
+                canvas: { width: 500, height: 700 },
+                objects: [
+                    { type: 'rect', left: 0, top: 0, width: 500, height: 700, fill: '#fdf6f4', selectable: false },
+                    { type: 'i-text', text: 'TOGETHER WITH THEIR FAMILIES', left: 250, top: 100, originX: 'center', fontFamily: 'Montserrat', fontSize: 14, fill: '#8c7a70', letterSpacing: 100 },
+                    { type: 'i-text', text: 'Olivia & Liam', left: 250, top: 200, originX: 'center', fontFamily: 'Georgia', fontStyle: 'italic', fontSize: 60, fill: '#5c4d46' },
+                    { type: 'i-text', text: 'REQUEST THE PLEASURE OF YOUR COMPANY\nAT THEIR WEDDING', left: 250, top: 300, originX: 'center', textAlign: 'center', fontFamily: 'Montserrat', fontSize: 14, fill: '#8c7a70', lineHeight: 1.5, letterSpacing: 50 },
+                    { type: 'i-text', text: 'SATURDAY, 21ST JUNE 2025\nAT FOUR O\'CLOCK IN THE AFTERNOON', left: 250, top: 450, originX: 'center', textAlign: 'center', fontFamily: 'Montserrat', fontSize: 16, fill: '#5c4d46', lineHeight: 1.6, fontWeight: 'bold' },
+                    { type: 'i-text', text: 'THE GRAND MANOR\n123 GARDEN LANE, WONDERVILLE', left: 250, top: 550, originX: 'center', textAlign: 'center', fontFamily: 'Montserrat', fontSize: 14, fill: '#8c7a70', lineHeight: 1.5 },
+                ]
+            },
+            {
+                id: 'anniversary-card-floral',
+                name: 'Floral Anniversary Card',
+                category: '🎉 Personal & Celebration',
+                preview: '/images/Floral_Anniversary_Card.png',
+                canvas: { width: 500, height: 700 },
+                objects: [
+                    { type: 'rect', left: 0, top: 0, width: 500, height: 700, fill: '#fff1f2', selectable: false },
+                    { type: 'i-text', text: 'Happy', left: 250, top: 250, originX: 'center', fontFamily: 'Georgia', fontStyle: 'italic', fontSize: 70, fill: '#be123c' },
+                    { type: 'i-text', text: 'Anniversary', left: 250, top: 320, originX: 'center', fontFamily: 'Georgia', fontSize: 70, fill: '#be123c', fontWeight: 'bold' },
+                    { type: 'i-text', text: 'To my love', left: 250, top: 420, originX: 'center', fontFamily: 'Montserrat', fontSize: 20, fill: '#e11d48' },
+                ]
+            },
+            {
+                id: 'diwali-greeting',
+                name: 'Diwali Festival Greeting',
+                category: '🎉 Personal & Celebration',
+                preview: '/images/Diwali_Festival_Greeting.png',
+                canvas: { width: 1080, height: 1080 },
+                objects: [
+                    { type: 'rect', left: 0, top: 0, width: 1080, height: 1080, fill: '#451a03', selectable: false },
+                    { type: 'i-text', text: 'Happy', left: 540, top: 350, originX: 'center', fontFamily: 'Georgia', fontSize: 150, fill: '#f59e0b', fontStyle: 'italic'},
+                    { type: 'i-text', text: 'Diwali', left: 540, top: 500, originX: 'center', fontFamily: 'Georgia', fontSize: 200, fill: '#f59e0b', fontWeight: 'bold'},
+                    { type: 'i-text', text: 'MAY THE FESTIVAL OF LIGHTS BRIGHTEN YOUR HOME', left: 540, top: 750, originX: 'center', fontFamily: 'Montserrat', fontSize: 30, fill: '#fed7aa'},
+                ]
+            },
+            {
+                id: 'bday-social-greeting',
+                name: 'Birthday Social Media Greeting',
+                category: '🎉 Personal & Celebration',
+                preview: '/images/Birthday_Social_Media_Greeting.png',
+                canvas: { width: 1080, height: 1080 },
+                objects: [
+                    { type: 'rect', left: 0, top: 0, width: 1080, height: 1080, fill: { type: 'radial', coords: { x1: 540, y1: 540, r1: 0, x2: 540, y2: 540, r2: 700 }, colorStops: [{ offset: 0, color: '#f5d0fe' }, { offset: 1, color: '#e879f9' }] }, selectable: false },
+                    { type: 'i-text', text: 'H A P P Y\nB I R T H D A Y', left: 540, top: 540, originX: 'center', originY: 'center', fontFamily: 'Anton', fontSize: 150, fill: 'white', shadow: 'rgba(0,0,0,0.2) 5px 5px 10px', textAlign: 'center', lineHeight: 1.1 },
+                    { type: 'i-text', text: 'Let\'s Celebrate!', left: 540, top: 800, originX: 'center', fontFamily: 'Montserrat', fontSize: 40, fill: '#faf5ff' },
+                ]
+            },
+            
+            // --- 📄 Professional & Career ---
+            {
+                id: 'modern-resume-v2',
+                name: 'Professional Resume',
+                category: '📄 Professional & Career',
+                preview: '/images/Professional_Resume.png',
+                canvas: { width: 800, height: 1120 },
+                objects: [
+                    { type: 'rect', left: 0, top: 0, width: 800, height: 1120, fill: 'white', selectable: false },
+                    { type: 'rect', left: 0, top: 0, width: 800, height: 150, fill: '#3730a3', selectable: false },
+                    { type: 'circle', left: 650, top: 75, originX: 'center', originY: 'center', radius: 60, fill: '#e0e7ff', stroke: '#4f46e5', strokeWidth: 4 },
+                    { type: 'i-text', text: 'AVATAR', left: 650, top: 75, originX: 'center', originY: 'center', fontFamily: 'Montserrat', fontSize: 20, fill: '#4338ca' },
+                    { type: 'i-text', text: 'CLAUDIA ALVEZ', left: 50, top: 60, fontFamily: 'Oswald', fontSize: 60, fill: 'white', fontWeight: 'bold' },
+                    { type: 'i-text', text: 'SENIOR PRODUCT MANAGER', left: 50, top: 115, fontFamily: 'Montserrat', fontSize: 20, fill: '#c7d2fe' },
+                    { type: 'i-text', text: 'About Me', left: 50, top: 200, fontFamily: 'Oswald', fontSize: 24, fill: '#312e81', fontWeight: 'bold' },
+                    { type: 'rect', left: 50, top: 235, width: 700, height: 2, fill: '#e0e7ff', selectable: false },
+                    { type: 'i-text', text: 'Detail-oriented Senior Product Manager with over 10 years of experience in leading cross-functional teams to deliver exceptional digital products. Proficient in agile methodologies, market research, and strategic planning.', left: 50, top: 250, width: 700, fontFamily: 'Montserrat', fontSize: 16, fill: '#374151', lineHeight: 1.5 },
+                    { type: 'i-text', text: 'Work Experience', left: 50, top: 380, fontFamily: 'Oswald', fontSize: 24, fill: '#312e81', fontWeight: 'bold' },
+                    { type: 'rect', left: 50, top: 415, width: 700, height: 2, fill: '#e0e7ff', selectable: false },
+                    { type: 'i-text', text: 'Innovate Corp. | Lead Product Manager | 2018 - Present\nTech Solutions Ltd. | Product Manager | 2014 - 2018', left: 50, top: 430, fontFamily: 'Montserrat', fontSize: 16, fill: '#374151', lineHeight: 1.8 }
+                ]
+            },
+            {
+                id: 'minimalist-resume-v3',
+                name: 'Minimalist Resume Template',
+                category: '📄 Professional & Career',
+                preview: '/images/Minimalist_Resume_Template.png',
+                canvas: { width: 800, height: 1120 },
+                objects: [
+                    { type: 'rect', left: 0, top: 0, width: 800, height: 1120, fill: '#ffffff', selectable: false },
+                    { type: 'i-text', text: 'Johnathan Doe', left: 400, top: 100, originX: 'center', fontFamily: 'Montserrat', fontSize: 60, fill: '#111827' },
+                    { type: 'i-text', text: 'UX DESIGNER & FRONT-END DEVELOPER', left: 400, top: 160, originX: 'center', fontFamily: 'Montserrat', fontSize: 16, fill: '#6b7280', letterSpacing: 200 },
+                    { type: 'line', x1: 100, y1: 220, x2: 700, y2: 220, stroke: '#e5e7eb', strokeWidth: 1, selectable: false },
+                    { type: 'i-text', text: 'EXPERIENCE', left: 100, top: 280, fontFamily: 'Oswald', fontSize: 24, fill: '#374151' },
+                    { type: 'i-text', text: '2020 - Present\n\n2018 - 2020', left: 100, top: 340, fontFamily: 'Montserrat', fontSize: 16, fill: '#374151', fontWeight: 'bold' },
+                    { type: 'i-text', text: 'Senior UX Designer at Creative Inc.\n- Led design on three major product launches.\n\nUI/UX Designer at Web Solutions\n- Redesigned the main dashboard, improving user engagement by 25%.', left: 250, top: 340, fontFamily: 'Montserrat', fontSize: 16, fill: '#4b5563', lineHeight: 1.6 },
+                ]
+            },
+            {
+                id: 'business-card-3d',
+                name: 'Modern Business Card with 3D Effect',
+                category: '📄 Professional & Career',
+                preview: '/images/Modern_Business_Card_with_3D_Effect.png',
+                canvas: { width: 1050, height: 600 },
+                objects: [
+                    { type: 'rect', left: 0, top: 0, width: 1050, height: 600, fill: '#f9fafb', selectable: false },
+                    { type: 'rect', left: 50, top: 50, width: 950, height: 500, fill: 'white', selectable: false, shadow: 'rgba(0,0,0,0.1) 10px 10px 30px' },
+                    { type: 'rect', left: 50, top: 50, width: 10, height: 500, fill: '#10b981', selectable: false },
+                    { type: 'i-text', text: 'LOGO', left: 120, top: 100, fontFamily: 'Montserrat', fontSize: 30, fill: '#d1d5db' },
+                    { type: 'i-text', text: 'Alex Grayson', left: 550, top: 200, fontFamily: 'Oswald', fontSize: 80, fill: '#1f2937' },
+                    { type: 'i-text', text: 'LEAD DEVELOPER', left: 550, top: 280, fontFamily: 'Montserrat', fontSize: 24, fill: '#10b981', letterSpacing: 100 },
+                    { type: 'i-text', text: 'alex.g@devdomain.com\n111.222.3333', left: 550, top: 400, fontFamily: 'Montserrat', fontSize: 22, fill: '#4b5563', lineHeight: 1.5 },
+                ]
+            },
+             {
+                id: 'portfolio-minimal',
+                name: 'Minimalist Portfolio',
+                category: '📄 Professional & Career',
+                preview: '/images/Minimalist_Portfolio.png',
+                canvas: { width: 1120, height: 792 }, // Landscape A4
+                objects: [
+                    { type: 'rect', left: 0, top: 0, width: 1120, height: 792, fill: '#ffffff', selectable: false },
+                    { type: 'rect', left: 50, top: 50, width: 600, height: 692, fill: '#f5f5f5', selectable: false },
+                    { type: 'i-text', text: 'Image', left: 350, top: 396, originX: 'center', originY: 'center', fontFamily: 'Montserrat', fontSize: 30, fill: '#cccccc' },
+                    { type: 'i-text', text: 'Project Title', left: 700, top: 150, fontFamily: 'Georgia', fontSize: 60, fill: '#333333', fontWeight: 'bold' },
+                    { type: 'rect', left: 700, top: 220, width: 150, height: 4, fill: '#c9a96d', selectable: false },
+                    { type: 'i-text', text: 'This section describes the project, its goals, the process, and the outcomes. It highlights the skills and creativity involved in bringing this concept to life.', left: 700, top: 260, width: 370, fontFamily: 'Montserrat', fontSize: 18, fill: '#555555', lineHeight: 1.6 },
+                    { type: 'i-text', text: 'YOUR NAME | 2024', left: 700, top: 700, fontFamily: 'Montserrat', fontSize: 16, fill: '#aaaaaa' },
+                ]
+            },
+            {
+                id: 'business-card-corp',
+                name: 'Corporate Business Card',
+                category: '📄 Professional & Career',
+                preview: '/images/Corporate_Business_Card.png',
+                canvas: { width: 1050, height: 600 },
+                objects: [
+                    { type: 'rect', left: 0, top: 0, width: 1050, height: 600, fill: 'white', selectable: false },
+                    { type: 'path', path: 'M 0 0 L 400 0 L 250 600 L 0 600 Z', fill: '#f0f0f0', selectable: false },
+                    { type: 'i-text', text: 'YOUR\nLOGO', left: 150, top: 300, originX: 'center', originY: 'center', fontFamily: 'Montserrat', fontSize: 40, fill: '#bbbbbb', textAlign: 'center' },
+                    { type: 'i-text', text: 'Jane Smith', left: 450, top: 150, fontFamily: 'Oswald', fontSize: 70, fill: '#333333', fontWeight: 'bold' },
+                    { type: 'i-text', text: 'Marketing Director', left: 450, top: 230, fontFamily: 'Montserrat', fontSize: 30, fill: '#0077b5' },
+                    { type: 'line', x1: 450, y1: 280, x2: 950, y2: 280, stroke: '#e0e0e0', strokeWidth: 2, selectable: false },
+                    { type: 'i-text', text: '123-456-7890\njane.s@ema.il\nwww.yourcompany.com', left: 450, top: 320, fontFamily: 'Montserrat', fontSize: 24, fill: '#555555', lineHeight: 1.6 },
+                ]
+            },
+            {
+                id: 'portfolio-nature',
+                name: 'Nature-Inspired Portfolio',
+                category: '📄 Professional & Career',
+                preview: '/images/Nature-Inspired_Portfolio.png',
+                canvas: { width: 1920, height: 1080 },
+                objects: [
+                    { type: 'rect', left: 0, top: 0, width: 1920, height: 1080, fill: '#f4f4f4', selectable: false },
+                    { type: 'rect', left: 0, top: 0, width: 600, height: 1080, fill: '#29524a', selectable: false },
+                    { type: 'i-text', text: 'PROJECT\nSHOWCASE', left: 300, top: 200, originX: 'center', fontFamily: 'Oswald', fontSize: 80, fill: '#ADE1C5', textAlign: 'center' },
+                    { type: 'i-text', text: 'A collection of work inspired by the natural world.', left: 300, top: 400, originX: 'center', width: 400, fontFamily: 'Montserrat', fontSize: 22, fill: '#ADE1C5', textAlign: 'center', lineHeight: 1.5 },
+                    { type: 'rect', left: 800, top: 150, width: 900, height: 600, fill: '#e0e0e0', selectable: false },
+                    { type: 'i-text', text: 'IMAGE', left: 1250, top: 450, originX: 'center', originY: 'center', fontFamily: 'Montserrat', fontSize: 50, fill: '#bbbbbb' },
+                    { type: 'i-text', text: 'Project Title', left: 800, top: 800, fontFamily: 'Georgia', fontSize: 50, fill: '#333' },
+                ]
+            },
+
+            // --- 📱 Social Media ---
+            {
+                id: 'youtube-banner-v2',
+                name: 'Gaming YouTube Banner',
+                category: '📱 Social Media',
+                preview: '/images/Gaming_YouTube_Banner.png',
+                canvas: { width: 2560, height: 1440 },
+                objects: [
+                    { type: 'rect', left: 0, top: 0, width: 2560, height: 1440, fill: { type: 'linear', x1: 0, y1: 0, x2: 2560, y2: 1440, colorStops: [{ offset: 0, color: '#1e1b4b' }, { offset: 1, color: '#312e81' }] }, selectable: false },
+                    { type: 'path', path: 'M 0 1440 L 1000 1440 L 700 400 L 0 600 Z', fill: 'rgba(219, 39, 119, 0.5)', selectable: false },
+                    { type: 'path', path: 'M 2560 0 L 1560 0 L 1860 1040 L 2560 840 Z', fill: 'rgba(139, 92, 246, 0.5)', selectable: false },
+                    { type: 'i-text', text: 'PIXELPULSE', left: 1280, top: 720, originX: 'center', originY: 'center', fontFamily: 'Impact', fontSize: 180, fill: 'white', shadow: 'rgba(219, 39, 119, 0.8) 5px 5px 20px' },
+                    { type: 'i-text', text: 'LEVEL UP YOUR GAME', left: 1280, top: 850, originX: 'center', originY: 'center', fontFamily: 'Montserrat', fontSize: 40, fill: '#fbcfe8', letterSpacing: 300 }
+                ]
+            },
+            {
+                id: 'youtube-banner-corp',
+                name: 'Corporate Tech YouTube Banner',
+                category: '📱 Social Media',
+                preview: '/images/Corporate_Tech_YouTube_Banner.png',
+                canvas: { width: 2560, height: 1440 },
+                objects: [
+                    { type: 'rect', left: 0, top: 0, width: 2560, height: 1440, fill: '#f8fafc', selectable: false },
+                    { type: 'path', path: 'M 1600 0 L 2560 0 L 2560 1440 L 1200 1440 Z', fill: '#1e3a8a', selectable: false },
+                    { type: 'i-text', text: 'YOUR CHANNEL', left: 1280, top: 720, originX: 'center', fontFamily: 'Oswald', fontSize: 150, fill: '#1e3a8a' },
+                    { type: 'i-text', text: 'WEEKLY INSIGHTS ON BUSINESS & TECHNOLOGY', left: 1280, top: 850, originX: 'center', fontFamily: 'Montserrat', fontSize: 36, fill: '#475569' },
+                ]
+            },
+            {
+                id: 'youtube-banner-lifestyle',
+                name: 'Lifestyle Vlog YouTube Banner',
+                category: '📱 Social Media',
+                preview: '/images/Lifestyle_Vlog_YouTube_Banner.png',
+                canvas: { width: 2560, height: 1440 },
+                objects: [
+                    { type: 'rect', left: 0, top: 0, width: 2560, height: 1440, fill: '#fdf4ff', selectable: false },
+                    { type: 'i-text', text: 'Your Name', left: 1280, top: 720, originX: 'center', fontFamily: 'Georgia', fontStyle: 'italic', fontSize: 180, fill: '#a21caf' },
+                    { type: 'i-text', text: 'VLOGS • BEAUTY • TRAVEL', left: 1280, top: 880, originX: 'center', fontFamily: 'Montserrat', fontSize: 40, fill: '#be185d', letterSpacing: 200 },
+                    { type: 'circle', left: 800, top: 720, originX: 'center', originY: 'center', radius: 100, fill: '#fce7f3' },
+                    { type: 'circle', left: 1760, top: 720, originX: 'center', originY: 'center', radius: 100, fill: '#fce7f3' },
+                ]
+            },
+            {
+                id: 'linkedin-banner-minimal',
+                name: 'Minimalist LinkedIn Banner',
+                category: '📱 Social Media',
+                preview: '/images/Minimalist_LinkedIn_Banner.png',
+                canvas: { width: 1584, height: 396 },
+                objects: [
+                    { type: 'rect', left: 0, top: 0, width: 1584, height: 396, fill: '#f8fafc', selectable: false },
+                    { type: 'i-text', text: 'Your Name', left: 200, top: 150, fontFamily: 'Montserrat', fontSize: 60, fill: '#1e293b' },
+                    { type: 'i-text', text: 'Consultant | Author | Speaker', left: 200, top: 220, fontFamily: 'Montserrat', fontSize: 24, fill: '#475569' },
+                    { type: 'line', x1: 200, y1: 260, x2: 600, y2: 260, stroke: '#e2e8f0', strokeWidth: 2 },
+                ]
+            },
+            {
+                id: 'linkedin-banner-creative',
+                name: 'Creative Portfolio LinkedIn Banner',
+                category: '📱 Social Media',
+                preview: '/images/Creative_Portfolio_LinkedIn_Banner.png',
+                canvas: { width: 1584, height: 396 },
+                objects: [
+                    { type: 'rect', left: 0, top: 0, width: 1584, height: 396, fill: '#ede9fe', selectable: false },
+                    { type: 'rect', left: 0, top: 0, width: 800, height: 396, fill: '#7c3aed', selectable: false },
+                    { type: 'i-text', text: 'JANE DOE', left: 400, top: 150, originX: 'center', fontFamily: 'Oswald', fontSize: 80, fill: 'white' },
+                    { type: 'i-text', text: 'VISUAL DESIGNER & ILLUSTRATOR', left: 400, top: 230, originX: 'center', fontFamily: 'Montserrat', fontSize: 22, fill: '#d8b4fe' },
+                    { type: 'i-text', text: 'Image', left: 1200, top: 198, originX: 'center', originY: 'center', fontFamily: 'Montserrat', fontSize: 40, fill: '#a7a7a7' },
+                ]
+            },
+            {
+                id: 'instagram-post-v2',
+                name: 'Minimalist IG Post',
+                category: '📱 Social Media',
+                preview: '/images/Minimalist_IG_Post.png',
+                canvas: { width: 1080, height: 1080 },
+                objects: [
+                    { type: 'rect', left: 0, top: 0, width: 1080, height: 1080, fill: '#fafafa', selectable: false },
+                    { type: 'rect', left: 100, top: 100, width: 880, height: 500, fill: '#e4e4e7', selectable: false },
+                    { type: 'i-text', text: 'Image Placeholder', left: 540, top: 350, originX: 'center', originY: 'center', fontFamily: 'Montserrat', fontSize: 40, fill: '#a1a1aa' },
+                    { type: 'i-text', text: 'Urban Explorer', left: 100, top: 680, fontFamily: 'Georgia', fontSize: 100, fill: '#27272a', fontWeight: 'bold' },
+                    { type: 'i-text', text: 'Discover the hidden gems of the city. A new perspective on familiar streets.', left: 100, top: 800, width: 880, fontFamily: 'Montserrat', fontSize: 36, fill: '#52525b', lineHeight: 1.4 },
+                    { type: 'i-text', text: '#Cityscape #Photography #Minimal', left: 100, top: 950, fontFamily: 'Montserrat', fontSize: 24, fill: '#a1a1aa' }
+                ]
+            },
+            {
+                id: 'youtube-thumbnail-bold',
+                name: 'Bold YouTube Thumbnail',
+                category: '📱 Social Media',
+                preview: '/images/Bold_YouTube_Thumbnail.png',
+                canvas: { width: 1280, height: 720 },
+                objects: [
+                    { type: 'rect', left: 0, top: 0, width: 1280, height: 720, fill: '#e5e7eb', selectable: false },
+                    { type: 'i-text', text: 'PLACE IMAGE HERE', left: 640, top: 360, originX: 'center', originY: 'center', fontFamily: 'Impact', fontSize: 80, fill: '#9ca3af' },
+                    { type: 'rect', left: 50, top: 500, width: 900, height: 150, fill: '#ef4444' },
+                    { type: 'i-text', text: 'YOUR CLICKBAIT TITLE', left: 500, top: 575, originX: 'center', originY: 'center', fontFamily: 'Impact', fontSize: 75, fill: 'white', stroke: 'black', strokeWidth: 2 }
+                ]
+            },
+            {
+                id: 'youtube-banner-retro',
+                name: 'Neon Retro YouTube Banner',
+                category: '📱 Social Media',
+                preview: '/images/Neon_Retro_YouTube_Banner.png',
+                canvas: { width: 2560, height: 1440 },
+                objects: [
+                    { type: 'rect', left: 0, top: 0, width: 2560, height: 1440, fill: '#1a001f', selectable: false },
+                    { type: 'i-text', text: 'CHANNEL NAME', left: 1280, top: 720, originX: 'center', originY: 'center', fontFamily: 'Impact', fontSize: 200, fill: '#f297ff', shadow: '0 0 30px #f297ff' },
+                    { type: 'i-text', text: 'NEW VIDEOS EVERY FRIDAY', left: 1280, top: 880, originX: 'center', fontFamily: 'Montserrat', fontSize: 40, fill: '#e5b8f4' },
+                ]
+            },
+            {
+                id: 'linkedin-banner-dark',
+                name: 'Futuristic LinkedIn Banner',
+                category: '📱 Social Media',
+                preview: '/images/Futuristic_LinkedIn_Banner.png',
+                canvas: { width: 1584, height: 396 },
+                objects: [
+                    { type: 'rect', left: 0, top: 0, width: 1584, height: 396, fill: '#0b1120', selectable: false },
+                    { type: 'i-text', text: 'YOUR NAME', left: 792, top: 150, originX: 'center', fontFamily: 'Oswald', fontSize: 80, fill: 'white' },
+                    { type: 'i-text', text: 'YOUR PROFESSIONAL TAGLINE | INNOVATOR | LEADER', left: 792, top: 240, originX: 'center', fontFamily: 'Montserrat', fontSize: 24, fill: '#60a5fa' },
+                ]
+            },
+            {
+                id: 'instagram-carousel-organic',
+                name: 'Organic Shapes IG Carousel',
+                category: '📱 Social Media',
+                preview: '/images/Organic_Shapes_IG_Carousel.png',
+                canvas: { width: 1080, height: 1080 },
+                objects: [
+                    { type: 'rect', left: 0, top: 0, width: 1080, height: 1080, fill: '#fffbeb', selectable: false },
+                    { type: 'path', path: 'M 0 300 Q 200 100 500 350 T 1080 300 L 1080 0 L 0 0 Z', fill: '#fed7aa', selectable: false },
+                    { type: 'i-text', text: 'Tip #1', left: 100, top: 150, fontFamily: 'Georgia', fontSize: 80, fill: '#d97706' },
+                    { type: 'i-text', text: 'Start with a strong headline. Grab the attention of your audience in the first three seconds.', left: 100, top: 400, width: 880, fontFamily: 'Montserrat', fontSize: 48, lineHeight: 1.4, fill: '#333' },
+                ]
+            },
+            {
+                id: 'wellness-yoga-post',
+                name: 'Wellness/Yoga Social Post',
+                category: '📱 Social Media',
+                preview: '/images/Wellness_Yoga_Social_Post.png',
+                canvas: { width: 1080, height: 1080 },
+                objects: [
+                    { type: 'rect', left: 0, top: 0, width: 1080, height: 1080, fill: '#f0fdf4', selectable: false },
+                    { type: 'rect', left: 100, top: 100, width: 880, height: 500, fill: '#d1fae5' },
+                    { type: 'i-text', text: 'IMAGE', left: 540, top: 350, originX: 'center', originY: 'center', fontFamily: 'Montserrat', fontSize: 40, fill: '#a7f3d0' },
+                    { type: 'i-text', text: 'Find Your Inner Peace', left: 540, top: 750, originX: 'center', fontFamily: 'Georgia', fontSize: 80, fill: '#14532d' },
+                    { type: 'i-text', text: 'Daily Yoga & Meditation', left: 540, top: 850, originX: 'center', fontFamily: 'Montserrat', fontSize: 30, fill: '#166534' },
+                ]
+            },
+            {
+                id: 'linkedin-thought-post',
+                name: 'LinkedIn Thought Leader Post',
+                category: '📱 Social Media',
+                preview: '/images/LinkedIn_Thought_Leader_Post.png',
+                canvas: { width: 1200, height: 1200 },
+                objects: [
+                    { type: 'rect', left: 0, top: 0, width: 1200, height: 1200, fill: '#f5f3ff', selectable: false },
+                    { type: 'i-text', text: '"The key to successful innovation is not just about having great ideas, but also about creating a culture where those ideas can thrive."', left: 600, top: 450, originX: 'center', width: 1000, fontFamily: 'Georgia', fontSize: 64, fill: '#1e1b4b', textAlign: 'center' },
+                    { type: 'circle', left: 200, top: 1000, originX: 'center', radius: 50, fill: '#e0e7ff' },
+                    { type: 'i-text', text: 'Your Name', left: 320, top: 980, fontFamily: 'Montserrat', fontSize: 36, fontWeight: 'bold', fill: '#312e81' },
+                    { type: 'i-text', text: 'Your Title / Company', left: 320, top: 1030, fontFamily: 'Montserrat', fontSize: 24, fill: '#4f46e5' },
+                ]
+            },
+            {
+                id: 'travel-story-cover',
+                name: 'Travel Story Highlight Cover',
+                category: '📱 Social Media',
+                preview: '/images/Travel_Story_Highlight_Cover.png',
+                canvas: { width: 1080, height: 1920 },
+                objects: [
+                    { type: 'rect', left: 0, top: 0, width: 1080, height: 1920, fill: '#e0f2fe', selectable: false },
+                    { type: 'circle', left: 540, top: 960, originX: 'center', originY: 'center', radius: 300, fill: '#7dd3fc' },
+                    // Simplified plane icon path
+                    { type: 'path', path: 'M 540 860 L 600 950 L 540 920 L 480 950 Z M 520 950 L 520 1020 L 560 1020 L 560 950 Z', fill: 'white', originX: 'center', originY: 'center', top: 960, left: 540 },
+                ]
+            },
+            {
+                id: 'youtube-end-screen',
+                name: 'YouTube End Screen',
+                category: '📱 Social Media',
+                preview: '/images/YouTube_End_Screen.png',
+                canvas: { width: 1920, height: 1080 },
+                objects: [
+                    { type: 'rect', left: 0, top: 0, width: 1920, height: 1080, fill: '#1f2937', selectable: false },
+                    { type: 'i-text', text: 'THANKS FOR WATCHING!', left: 960, top: 200, originX: 'center', fontFamily: 'Anton', fontSize: 100, fill: 'white' },
+                    { type: 'rect', left: 200, top: 350, width: 600, height: 350, fill: '#374151' },
+                    { type: 'i-text', text: 'PREVIOUS VIDEO', left: 500, top: 525, originX: 'center', originY: 'center', fontFamily: 'Montserrat', fontSize: 40, fill: '#9ca3af' },
+                    { type: 'circle', left: 1260, top: 525, originX: 'center', originY: 'center', radius: 150, fill: '#374151' },
+                    { type: 'i-text', text: 'SUBSCRIBE', left: 1260, top: 525, originX: 'center', originY: 'center', fontFamily: 'Montserrat', fontSize: 40, fill: '#9ca3af' },
+                    { type: 'i-text', text: '@YourChannel', left: 960, top: 900, originX: 'center', fontFamily: 'Montserrat', fontSize: 36, fill: '#ef4444' },
+                ]
+            },
+
+            // --- 🖼️ Branding & Design ---
+            {
+                id: 'logo-elegant',
+                name: 'Elegant Monogram Logo',
+                category: '🖼️ Branding & Design',
+                preview: '/images/Elegant_Monogram_Logo.png',
+                canvas: { width: 500, height: 500 },
+                objects: [
+                    { type: 'rect', left: 0, top: 0, width: 500, height: 500, fill: '#0a192f', selectable: false },
+                    { type: 'circle', left: 250, top: 250, originX: 'center', originY: 'center', radius: 220, stroke: '#c0c0c0', strokeWidth: 3, fill: 'transparent' },
+                    { type: 'circle', left: 250, top: 250, originX: 'center', originY: 'center', radius: 205, stroke: '#c0c0c0', strokeWidth: 1, fill: 'transparent' },
+                    { type: 'i-text', text: 'JD', left: 250, top: 250, originX: 'center', originY: 'center', fontFamily: 'Georgia', fontSize: 200, fill: '#ffffff', fontWeight: 'bold' },
+                    { type: 'i-text', text: 'JOHN DOE', left: 250, top: 380, originX: 'center', originY: 'center', fontFamily: 'Montserrat', fontSize: 24, fill: '#c0c0c0', letterSpacing: 400 },
+                ]
+            },
+            {
+                id: 'flyer-corporate',
+                name: 'Corporate Flyer',
+                category: '🖼️ Branding & Design',
+                preview: '/images/Corporate_Flyer.png',
+                canvas: { width: 800, height: 1120 },
+                objects: [
+                    { type: 'rect', left: 0, top: 0, width: 800, height: 1120, fill: 'white', selectable: false },
+                    { type: 'path', path: 'M 0 0 L 800 0 L 800 300 L 0 200 Z', fill: '#0284c7', selectable: false },
+                    { type: 'i-text', text: 'ANNUAL\nBUSINESS\nCONFERENCE', left: 50, top: 50, fontFamily: 'Oswald', fontSize: 80, fill: 'white', fontWeight: 'bold' },
+                    { type: 'i-text', text: 'Event Details', left: 50, top: 350, fontFamily: 'Oswald', fontSize: 40, fill: '#0369a1' },
+                    { type: 'i-text', text: 'Date: 15th October 2025\nTime: 9:00 AM - 5:00 PM\nVenue: The Grand Convention Center', left: 50, top: 420, fontFamily: 'Montserrat', fontSize: 24, fill: '#333', lineHeight: 1.8 },
+                ]
+            },
+            {
+                id: 'certificate-achievement',
+                name: 'Certificate of Achievement',
+                category: '🖼️ Branding & Design',
+                preview: '/images/Certificate_of_Achievement.png',
+                canvas: { width: 1120, height: 792 },
+                objects: [
+                    { type: 'rect', left: 0, top: 0, width: 1120, height: 792, fill: '#fffbeb', selectable: false },
+                    { type: 'rect', left: 20, top: 20, width: 1080, height: 752, fill: 'transparent', stroke: '#b45309', strokeWidth: 4, selectable: false },
+                    { type: 'rect', left: 25, top: 25, width: 1070, height: 742, fill: 'transparent', stroke: '#b45309', strokeWidth: 1, selectable: false },
+                    { type: 'i-text', text: 'Certificate of Achievement', left: 560, top: 150, originX: 'center', fontFamily: 'Georgia', fontSize: 60, fill: '#92400e' },
+                    { type: 'i-text', text: 'PROUDLY PRESENTED TO', left: 560, top: 250, originX: 'center', fontFamily: 'Montserrat', fontSize: 24, fill: '#b45309' },
+                    { type: 'i-text', text: 'Recipient Name', left: 560, top: 350, originX: 'center', fontFamily: 'Georgia', fontStyle: 'italic', fontSize: 50, fill: '#333' },
+                    { type: 'line', x1: 300, y1: 420, x2: 820, y2: 420, stroke: '#ca8a04', strokeWidth: 1, selectable: false},
+                ]
+            },
+            {
+                id: 'flyer-cyber-noir',
+                name: 'Cyber-Noir Event Flyer',
+                category: '🖼️ Branding & Design',
+                preview: '/images/Cyber-Noir_Event_Flyer.png',
+                canvas: { width: 600, height: 900 },
+                objects: [
+                    { type: 'rect', left: 0, top: 0, width: 600, height: 900, fill: '#0a0814', selectable: false },
+                    { type: 'i-text', text: 'CYBER CITY\nNIGHTS', left: 300, top: 200, originX: 'center', fontFamily: 'Impact', fontSize: 100, fill: '#ff00e1', shadow: '0 0 20px #ff00e1', textAlign: 'center' },
+                    { type: 'i-text', text: 'LIVE DJ SETS // FUTURE FUNK', left: 300, top: 400, originX: 'center', fontFamily: 'Montserrat', fontSize: 24, fill: '#00f6ff', letterSpacing: 100 },
+                    { type: 'rect', left: 50, top: 500, width: 500, height: 2, fill: '#4a0045', selectable: false },
+                    { type: 'i-text', text: 'LOCATION: THE VOID CLUB\nDATE: 31.10.2025', left: 300, top: 550, originX: 'center', fontFamily: 'Montserrat', fontSize: 20, fill: '#a2a1b5', textAlign: 'center', lineHeight: 1.5 },
+                ]
+            },
+            {
+                id: 'fashion-moodboard',
+                name: 'Fashion Lookbook Template',
+                category: '🖼️ Branding & Design',
+                preview: '/images/Fashion_Lookbook_Template.png',
+                canvas: { width: 1200, height: 1500 },
+                objects: [
+                    { type: 'rect', left: 0, top: 0, width: 1200, height: 1500, fill: '#ffffff', selectable: false },
+                    { type: 'rect', left: 100, top: 100, width: 600, height: 800, fill: '#e5e5e5' },
+                    { type: 'rect', left: 750, top: 500, width: 350, height: 500, fill: '#e5e5e5' },
+                    { type: 'i-text', text: 'AUTUMN \'25', left: 750, top: 200, fontFamily: 'Georgia', fontSize: 80, fill: '#333' },
+                    { type: 'i-text', text: 'A collection exploring the tones and textures of the season.', left: 750, top: 320, width: 350, fontFamily: 'Montserrat', fontSize: 20, fill: '#555', lineHeight: 1.5 },
+                    { type: 'i-text', text: 'Style No. 25-01', left: 100, top: 920, fontFamily: 'Montserrat', fontSize: 18, fill: '#888' },
+                ]
+            },
+            {
+                id: 'eco-certificate',
+                name: 'Eco-Friendly Certificate',
+                category: '🖼️ Branding & Design',
+                preview: '/images/Eco-Friendly_Certificate.png',
+                canvas: { width: 1120, height: 792 },
+                objects: [
+                    { type: 'rect', left: 0, top: 0, width: 1120, height: 792, fill: '#f0fdf4', selectable: false },
+                    { type: 'path', path: 'M 50 50 L 1070 50 L 1070 742 L 50 742 Z', stroke: '#166534', strokeWidth: 2, fill: 'transparent' },
+                    { type: 'i-text', text: 'CERTIFICATE OF SUSTAINABILITY', left: 560, top: 150, originX: 'center', fontFamily: 'Oswald', fontSize: 50, fill: '#14532d' },
+                    { type: 'i-text', text: 'This certifies that', left: 560, top: 250, originX: 'center', fontFamily: 'Montserrat', fontSize: 24, fill: '#16a34a' },
+                    { type: 'i-text', text: 'Brand Name Here', left: 560, top: 350, originX: 'center', fontFamily: 'Georgia', fontStyle: 'italic', fontSize: 60, fill: '#14532d' },
+                    { type: 'i-text', text: 'is committed to eco-friendly practices and sustainable operations.', left: 560, top: 450, originX: 'center', width: 800, fontFamily: 'Montserrat', fontSize: 22, fill: '#333', textAlign: 'center' },
+                ]
+            },
+            {
+                id: 'gaming-logo',
+                name: 'Gaming Channel Logo',
+                category: '🖼️ Branding & Design',
+                preview: '/images/Gaming_Channel_Logo.png',
+                canvas: { width: 500, height: 500 },
+                objects: [
+                    { type: 'rect', left: 0, top: 0, width: 500, height: 500, fill: '#1f2937', selectable: false },
+                    { type: 'path', path: 'M 50 50 L 250 10 L 450 50 L 450 250 L 250 490 L 50 250 Z', fill: '#374151', stroke: '#f97316', strokeWidth: 5 },
+                    { type: 'i-text', text: 'RAVEN', left: 250, top: 250, originX: 'center', originY: 'center', fontFamily: 'Anton', fontSize: 120, fill: 'white' },
+                ]
+            },
+
+            // --- 🏢 Business & Marketing ---
+            {
+                id: 'poster-sale',
+                name: 'Big Sale Poster',
+                category: '🏢 Business & Marketing',
+                preview: '/images/Big_sale_Poster.png',
+                canvas: { width: 600, height: 900 },
+                objects: [
+                    { type: 'rect', left: 0, top: 0, width: 600, height: 900, fill: '#b91c1c', selectable: false },
+                    { type: 'i-text', text: 'BIG SALE', left: 300, top: 200, originX: 'center', fontFamily: 'Impact', fontSize: 150, fill: 'white', angle: -5 },
+                    { type: 'i-text', text: '50% OFF', left: 300, top: 450, originX: 'center', originY: 'center', fontFamily: 'Impact', fontSize: 200, fill: '#fef08a', stroke: 'black', strokeWidth: 4 },
+                    { type: 'i-text', text: 'LIMITED TIME ONLY!', left: 300, top: 700, originX: 'center', fontFamily: 'Montserrat', fontSize: 40, fill: 'white', fontWeight: 'bold' }
+                ]
+            },
+            {
+                id: 'tech-pitch-deck',
+                name: 'Tech Startup Pitch Deck Cover',
+                category: '🏢 Business & Marketing',
+                preview: '/images/Tech_Startup_Pitch_Deck_Cover.png',
+                canvas: { width: 1920, height: 1080 },
+                objects: [
+                    { type: 'rect', left: 0, top: 0, width: 1920, height: 1080, fill: { type: 'linear', x1: 0, y1: 0, x2: 1920, y2: 1080, colorStops: [{ offset: 0, color: '#312e81' }, { offset: 1, color: '#4f46e5' }] }, selectable: false },
+                    { type: 'i-text', text: '[ YOUR LOGO ]', left: 200, top: 150, fontFamily: 'Montserrat', fontSize: 36, fill: '#e0e7ff' },
+                    { type: 'i-text', text: 'Revolutionizing\nThe Future of X.', left: 200, top: 350, fontFamily: 'Oswald', fontSize: 150, fill: 'white', fontWeight: 'bold' },
+                    { type: 'i-text', text: 'A Pitch Deck by [Your Company Name]', left: 200, top: 800, fontFamily: 'Montserrat', fontSize: 24, fill: '#c7d2fe' },
+                ]
+            },
+            {
+                id: 'product-launch-ad',
+                name: 'Product Launch Ad Banner',
+                category: '🏢 Business & Marketing',
+                preview: '/images/Product_Launch_Ad_Banner.png',
+                canvas: { width: 1080, height: 1080 },
+                objects: [
+                    { type: 'rect', left: 0, top: 0, width: 1080, height: 1080, fill: '#1c1917', selectable: false },
+                    { type: 'circle', left: 540, top: 450, originX: 'center', originY: 'center', radius: 300, fill: '#44403c' },
+                    { type: 'i-text', text: 'YOUR\nPRODUCT', left: 540, top: 450, originX: 'center', originY: 'center', fontFamily: 'Montserrat', fontSize: 80, fill: '#a8a29e', textAlign: 'center' },
+                    { type: 'i-text', text: 'FINALLY HERE', left: 540, top: 150, originX: 'center', fontFamily: 'Anton', fontSize: 120, fill: '#f59e0b' },
+                    { type: 'rect', left: 290, top: 850, width: 500, height: 100, fill: '#f59e0b' },
+                    { type: 'i-text', text: 'SHOP NOW', left: 540, top: 900, originX: 'center', originY: 'center', fontFamily: 'Anton', fontSize: 60, fill: 'black' },
+                ]
+            },
+            {
+                id: 'newsletter-header',
+                name: 'Email Newsletter Header',
+                category: '🏢 Business & Marketing',
+                preview: '/images/Email_Newsletter_Header.png',
+                canvas: { width: 600, height: 200 },
+                objects: [
+                    { type: 'rect', left: 0, top: 0, width: 600, height: 200, fill: { type: 'linear', x1: 0, y1: 0, x2: 600, y2: 0, colorStops: [{ offset: 0, color: '#8b5cf6' }, { offset: 1, color: '#ec4899' }] }, selectable: false },
+                    { type: 'i-text', text: 'WEEKLY INSIGHTS', left: 300, top: 100, originX: 'center', originY: 'center', fontFamily: 'Oswald', fontSize: 60, fill: 'white' },
+                ]
+            },
+            {
+                id: 'annual-report-cover',
+                name: 'Annual Report Cover',
+                category: '🏢 Business & Marketing',
+                preview: '/images/Annual_Report_Cover.png',
+                canvas: { width: 800, height: 1120 },
+                objects: [
+                    { type: 'rect', left: 0, top: 0, width: 800, height: 1120, fill: '#f0f9ff', selectable: false },
+                    { type: 'rect', left: 0, top: 0, width: 800, height: 300, fill: '#0369a1' },
+                    { type: 'i-text', text: 'ANNUAL REPORT', left: 100, top: 500, fontFamily: 'Oswald', fontSize: 100, fill: '#075985' },
+                    { type: 'i-text', text: '2025', left: 100, top: 620, fontFamily: 'Oswald', fontSize: 100, fill: '#e0f2fe' },
+                    { type: 'i-text', text: '[COMPANY NAME]', left: 100, top: 900, fontFamily: 'Montserrat', fontSize: 36, fill: '#0891b2' },
+                ]
+            },
+            
+            // --- 🎨 Creative & Artistic ---
+            {
+                id: 'music-cover-art',
+                name: 'Music Cover Art',
+                category: '🎨 Creative & Artistic',
+                preview: '/images/Music_Cover_Art.png',
+                canvas: { width: 1500, height: 1500 },
+                objects: [
+                    { type: 'rect', left: 0, top: 0, width: 1500, height: 1500, fill: '#262626' },
+                    { type: 'i-text', text: 'IMAGE HERE', left: 750, top: 750, originX: 'center', originY: 'center', fontFamily: 'Montserrat', fontSize: 100, fill: '#525252' },
+                    { type: 'i-text', text: 'ALBUM TITLE', left: 100, top: 1300, fontFamily: 'Anton', fontSize: 120, fill: 'white' },
+                    { type: 'i-text', text: 'ARTIST NAME', left: 100, top: 1420, fontFamily: 'Montserrat', fontSize: 40, fill: '#a3a3a3' },
+                ]
+            },
+            {
+                id: 'glitch-poster',
+                name: 'Glitch Typography Poster',
+                category: '🎨 Creative & Artistic',
+                preview: '/images/Glitch_Typography_Poster.png',
+                canvas: { width: 600, height: 900 },
+                objects: [
+                    { type: 'rect', left: 0, top: 0, width: 600, height: 900, fill: 'black' },
+                    { type: 'i-text', text: 'GLITCH', left: 305, top: 450, originX: 'center', originY: 'center', fontFamily: 'Impact', fontSize: 200, fill: '#00ffff' },
+                    { type: 'i-text', text: 'GLITCH', left: 295, top: 450, originX: 'center', originY: 'center', fontFamily: 'Impact', fontSize: 200, fill: '#ff00ff' },
+                    { type: 'i-text', text: 'GLITCH', left: 300, top: 450, originX: 'center', originY: 'center', fontFamily: 'Impact', fontSize: 200, fill: 'white' },
+                ]
+            },
+            {
+                id: 'retro-blog-header',
+                name: 'Retro Futuristic Blog Header',
+                category: '🎨 Creative & Artistic',
+                preview: '/images/Retro_Futuristic_Blog_Header.png',
+                canvas: { width: 1200, height: 400 },
+                objects: [
+                    { type: 'rect', left: 0, top: 0, width: 1200, height: 400, fill: { type: 'linear', x1: 0, y1: 0, x2: 0, y2: 400, colorStops: [{ offset: 0, color: '#ff00ff' }, { offset: 1, color: '#000020' }] } },
+                    { type: 'i-text', text: 'THE RETRO BLOG', left: 600, top: 200, originX: 'center', originY: 'center', fontFamily: 'Impact', fontSize: 100, fill: 'white', stroke: 'black', strokeWidth: 2 },
+                ]
+            },
+            {
+                id: 'festival-poster',
+                name: 'Festival / Concert Poster',
+                category: '🎨 Creative & Artistic',
+                preview: '/images/Festival___Concert_Poster.png',
+                canvas: { width: 800, height: 1200 },
+                objects: [
+                    { type: 'rect', left: 0, top: 0, width: 800, height: 1200, fill: { type: 'linear', x1: 0, y1: 0, x2: 800, y2: 1200, colorStops: [{ offset: 0, color: '#1e1b4b' }, { offset: 1, color: '#4c1d95' }] } },
+                    { type: 'i-text', text: 'COSMIC\nVIBES', left: 400, top: 250, originX: 'center', fontFamily: 'Anton', fontSize: 180, fill: '#f0abfc', textAlign: 'center', shadow: '0 0 20px #f0abfc' },
+                    { type: 'i-text', text: 'Artist One / Artist Two / Artist Three', left: 400, top: 600, originX: 'center', fontFamily: 'Montserrat', fontSize: 36, fill: 'white', textAlign: 'center' },
+                ]
+            },
+            
+            // --- 🚀 Futuristic & Tech ---
+            {
+                id: 'app-splash-screen',
+                name: 'App Splash Screen Template',
+                category: '🚀 Futuristic & Tech',
+                preview: '/images/App_Splash_Screen_Template.png',
+                canvas: { width: 1080, height: 1920 },
+                objects: [
+                    { type: 'rect', left: 0, top: 0, width: 1080, height: 1920, fill: '#111827' },
+                    { type: 'circle', left: 540, top: 800, originX: 'center', originY: 'center', radius: 150, stroke: '#4b5563', strokeWidth: 5, fill: 'transparent' },
+                    { type: 'i-text', text: 'LOGO', left: 540, top: 800, originX: 'center', originY: 'center', fontFamily: 'Montserrat', fontSize: 60, fill: '#6b7280' },
+                    { type: 'i-text', text: 'Loading...', left: 540, top: 1200, originX: 'center', fontFamily: 'Montserrat', fontSize: 36, fill: '#d1d5db' },
+                ]
+            },
+        ];
+
+        // --- UI INITIALIZATION & ROUTING ---
+        const initHomepage = () => {
+            templateGallery.innerHTML = '';
+            
+            const categories = [...new Set(templates.map(t => t.category))];
+
+            categories.forEach(category => {
+                const categoryTitle = document.createElement('h2');
+                categoryTitle.className = 'text-3xl font-bold pt-8 pb-2 border-b border-gray-300 dark:border-gray-600';
+                categoryTitle.textContent = category;
+                templateGallery.appendChild(categoryTitle);
+
+                const categoryGrid = document.createElement('div');
+                categoryGrid.className = 'grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-6 pt-6';
+                
+                const categoryTemplates = templates.filter(t => t.category === category);
+
+                categoryTemplates.forEach(template => {
+                    const card = document.createElement('div');
+                    card.className = 'template-card group cursor-pointer bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden';
+                    card.innerHTML = `
+                        <div class="relative overflow-hidden">
+                            <img src="${template.preview}" alt="${template.name}" class="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-300">
+                             <div class="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                 <button data-template-id="${template.id}" class="edit-template-btn bg-primary-600 text-white px-4 py-2 rounded-lg font-semibold">Edit Template</button>
+                             </div>
+                        </div>
+                        <div class="p-4">
+                            <h3 class="font-bold text-lg">${template.name}</h3>
+                            <p class="text-sm text-gray-500 dark:text-gray-400">${template.category.split(' ')[1]}</p>
+                        </div>
+                    `;
+                    categoryGrid.appendChild(card);
+                });
+                templateGallery.appendChild(categoryGrid);
+            });
+        };
+
+        const showHomepage = () => {
+            homepage.classList.remove('hidden');
+            editor.classList.add('hidden');
+            if (canvas) {
+                canvas.dispose();
+                canvas = null;
+                document.getElementById('editor-canvas').innerHTML = '';
+            }
+        };
+
+        const showEditor = () => {
+            homepage.classList.add('hidden');
+            editor.classList.remove('hidden');
+        };
+
+
+        // --- EDITOR INITIALIZATION ---
+        const initEditor = (templateId) => {
+            showEditor();
+            
+            const template = templates.find(t => t.id === templateId);
+            if (!template) {
+                console.error('Template not found');
+                showHomepage();
+                return;
+            }
+            
+            projectNameEl.textContent = template.name;
+
+            // Dispose previous canvas if it exists
+            if(canvas) {
+                canvas.dispose();
+            }
+
+            const canvasEl = document.getElementById('editor-canvas');
+            const wrapper = document.getElementById('canvas-wrapper');
+            // Remove fixed sizing on wrapper
+            wrapper.style.width = ``;
+            wrapper.style.height = ``;
+            
+            canvasEl.width = template.canvas.width;
+            canvasEl.height = template.canvas.height;
+            
+
+            canvas = new fabric.Canvas('editor-canvas');
+            canvas.originalWidth = template.canvas.width;
+            canvas.originalHeight = template.canvas.height;
+
+            fabric.Object.prototype.transparentCorners = false;
+            fabric.Object.prototype.cornerColor = '#3b82f6';
+            fabric.Object.prototype.cornerStyle = 'circle';
+            fabric.Object.prototype.borderColor = '#3b82f6';
+            fabric.Object.prototype.cornerSize = 10;
+            
+            loadTemplate(template);
+
+            // Setup event listeners for the canvas
+            canvas.on('selection:created', updatePropertiesPanel);
+            canvas.on('selection:updated', updatePropertiesPanel);
+            canvas.on('selection:cleared', clearPropertiesPanel);
+            canvas.on('object:modified', saveState);
+            canvas.on('object:added', () => { updateLayersPanel(); saveState(); });
+            canvas.on('object:removed', () => { updateLayersPanel(); saveState(); });
+
+            // Ensure double-clicking enters text editing mode
+            canvas.on('mouse:dblclick', (options) => {
+                if (options.target && options.target.isType('i-text')) {
+                    options.target.enterEditing();
+                }
+            });
+
+            // Ensure properties panel is up-to-date after inline editing
+            canvas.on('editing:exited', updatePropertiesPanel);
+
+            clearHistory();
+            saveState(); // Initial state
+            updateLayersPanel();
+            autoFitCanvas(); // Auto-fit the canvas to the screen
+        };
+
+        const loadTemplate = (template) => {
+            canvas.loadFromJSON({ objects: template.objects }, () => {
+                const bgObject = canvas.getObjects().find(obj => obj.selectable === false && (obj.width === template.canvas.width && obj.height === template.canvas.height));
+                if(bgObject) {
+                    canvas.setBackgroundColor(bgObject.fill, canvas.renderAll.bind(canvas));
+                    canvas.remove(bgObject);
+                }
+                
+                canvas.renderAll();
+                saveState();
+                updateLayersPanel();
+            });
+        };
+
+        // --- PROPERTIES PANEL LOGIC ---
+        const updatePropertiesPanel = () => {
+            noSelectionDiv.classList.add('hidden');
+            propertiesContentDiv.classList.remove('hidden');
+            propertiesContentDiv.innerHTML = '';
+            
+            const activeObject = canvas.getActiveObject();
+            if (!activeObject) {
+                clearPropertiesPanel();
+                return;
+            }
+
+            // Common Properties
+            let html = `
+                <div class="property-group">
+                    <label class="font-semibold text-sm">Opacity</label>
+                    <input type="range" min="0" max="1" step="0.01" value="${activeObject.get('opacity')}" data-property="opacity">
+                </div>
+            `;
+            
+            // Type-specific properties
+            if (activeObject.type === 'i-text' || activeObject.type === 'textbox') {
+                html += `
+                    <div class="property-group">
+                        <label class="font-semibold text-sm">Text</label>
+                        <textarea class="mt-1" rows="3" data-property="text">${activeObject.get('text')}</textarea>
+                    </div>
+                    <div class="property-group">
+                        <label class="font-semibold text-sm">Font Family</label>
+                        <select data-property="fontFamily">
+                            <option>Arial</option>
+                            <option>Helvetica</option>
+                            <option>Georgia</option>
+                            <option>Impact</option>
+                            <option>Oswald</option>
+                            <option>Montserrat</option>
+                            <option>Anton</option>
+                        </select>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div class="property-group">
+                            <label class="font-semibold text-sm">Font Size</label>
+                            <input type="number" value="${activeObject.get('fontSize')}" data-property="fontSize">
+                        </div>
+                         <div class="property-group">
+                            <label class="font-semibold text-sm">Line Height</label>
+                            <input type="number" step="0.1" value="${activeObject.get('lineHeight')}" data-property="lineHeight">
+                        </div>
+                    </div>
+                     <div class="property-group">
+                        <label class="font-semibold text-sm">Color</label>
+                        <input type="color" value="${activeObject.get('fill')}" data-property="fill">
+                    </div>
+                    <div class="grid grid-cols-3 gap-2">
+                         <div class="property-group">
+                            <label class="font-semibold text-sm">Bold</label>
+                            <input type="checkbox" ${activeObject.get('fontWeight') === 'bold' ? 'checked' : ''} data-property="fontWeight" data-value="bold" data-off-value="normal">
+                        </div>
+                        <div class="property-group">
+                            <label class="font-semibold text-sm">Italic</label>
+                            <input type="checkbox" ${activeObject.get('fontStyle') === 'italic' ? 'checked' : ''} data-property="fontStyle" data-value="italic" data-off-value="normal">
+                        </div>
+                         <div class="property-group">
+                            <label class="font-semibold text-sm">Underline</label>
+                            <input type="checkbox" ${activeObject.get('underline') ? 'checked' : ''} data-property="underline">
+                        </div>
+                    </div>
+                `;
+            } else if (activeObject.type === 'image') {
+                // Image specific properties here
+            }
+
+            propertiesContentDiv.innerHTML = html;
+            
+            // Set select values
+            const fontFamilySelect = propertiesContentDiv.querySelector('select[data-property="fontFamily"]');
+            if (fontFamilySelect) {
+                fontFamilySelect.value = activeObject.get('fontFamily');
+            }
+        };
+
+        const clearPropertiesPanel = () => {
+            noSelectionDiv.classList.remove('hidden');
+            propertiesContentDiv.classList.add('hidden');
+            propertiesContentDiv.innerHTML = '';
+        };
+
+        propertiesContentDiv.addEventListener('input', (e) => {
+            const target = e.target;
+            const property = target.dataset.property;
+            const activeObject = canvas.getActiveObject();
+
+            if (!activeObject || !property) return;
+
+            let value = target.value;
+            if (target.type === 'range' || target.type === 'number') {
+                value = parseFloat(value);
+            }
+             if (target.type === 'checkbox') {
+                if(target.dataset.value) { // For properties like fontWeight
+                    value = target.checked ? target.dataset.value : target.dataset.offValue;
+                } else {
+                    value = target.checked;
+                }
+            }
+
+            activeObject.set(property, value);
+            canvas.renderAll();
+        });
+        
+        propertiesContentDiv.addEventListener('change', (e) => { // for select and after number input finished
+             const target = e.target;
+            const property = target.dataset.property;
+             if (!property) return;
+            saveState();
+        });
+
+        // --- LAYERS PANEL ---
+        const updateLayersPanel = () => {
+            if(!canvas) return;
+            layersList.innerHTML = '';
+            const objects = canvas.getObjects().slice().reverse();
+            objects.forEach((obj, index) => {
+                let name = obj.type;
+                if(obj.type === 'i-text' || obj.type === 'textbox') {
+                    name = obj.text.substring(0, 20) + (obj.text.length > 20 ? '...' : '');
+                }
+
+                const layerItem = document.createElement('div');
+                layerItem.className = 'layer-item flex items-center justify-between p-2 rounded-lg bg-gray-100 dark:bg-gray-800 cursor-pointer';
+                layerItem.dataset.index = canvas.getObjects().indexOf(obj);
+                layerItem.innerHTML = `
+                    <span class="text-sm truncate">${name}</span>
+                    <div class="flex items-center gap-1">
+                        <button class="layer-action p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded" data-action="delete" title="Delete">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                        </button>
+                        <button class="layer-action p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded" data-action="up" title="Bring Forward">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+                        </button>
+                         <button class="layer-action p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded" data-action="down" title="Send Backward">
+                           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
+                        </button>
+                    </div>
+                `;
+                layersList.appendChild(layerItem);
+            });
+        };
+        
+        layersList.addEventListener('click', (e) => {
+            const target = e.target.closest('.layer-action');
+            if (target) {
+                const action = target.dataset.action;
+                const item = target.closest('.layer-item');
+                const index = parseInt(item.dataset.index, 10);
+                const obj = canvas.getObjects()[index];
+                if(obj) {
+                    switch(action) {
+                        case 'delete': canvas.remove(obj); break;
+                        case 'up': canvas.bringForward(obj); break;
+                        case 'down': canvas.sendBackwards(obj); break;
+                    }
+                    canvas.renderAll();
+                    updateLayersPanel();
+                }
+                return;
+            }
+            
+            const item = e.target.closest('.layer-item');
+            if (item) {
+                const index = parseInt(item.dataset.index, 10);
+                const obj = canvas.getObjects()[index];
+                canvas.setActiveObject(obj).renderAll();
+            }
+        });
+
+
+        // --- EDITOR FEATURES ---
+        addTextBtn.addEventListener('click', () => {
+            const text = new fabric.IText('Your Text Here', {
+                left: canvas.width / 2,
+                top: canvas.height / 2,
+                originX: 'center',
+                originY: 'center',
+                fontFamily: 'Arial',
+                fontSize: 50,
+                fill: '#333'
+            });
+            canvas.add(text);
+            canvas.setActiveObject(text);
+        });
+        
+        uploadImageBtn.addEventListener('click', () => imageUploadInput.click());
+
+        imageUploadInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (f) => {
+                fabric.Image.fromURL(f.target.result, (img) => {
+                    img.scaleToWidth(canvas.width / 2);
+                    img.set({
+                        left: canvas.width / 2,
+                        top: canvas.height / 2,
+                        originX: 'center',
+                        originY: 'center',
+                    });
+                    canvas.add(img);
+                });
+            };
+            reader.readAsDataURL(file);
+            e.target.value = ''; // Reset input
+        });
+        
+        changeBgBtn.addEventListener('click', () => {
+            // Simple color picker for background
+            const colorInput = document.createElement('input');
+            colorInput.type = 'color';
+            colorInput.onchange = () => {
+                canvas.setBackgroundColor(colorInput.value, canvas.renderAll.bind(canvas));
+                saveState();
+            };
+            colorInput.click();
+        });
+
+        // --- HISTORY (UNDO/REDO) ---
+        const saveState = () => {
+            if (isHistoryAction) return; // Don't save state during an undo/redo action
+            
+            // If we are in the middle of history, slice the future states
+            if (historyIndex < stateHistory.length - 1) {
+                stateHistory = stateHistory.slice(0, historyIndex + 1);
+            }
+            
+            stateHistory.push(canvas.toObject());
+            historyIndex++;
+            updateUndoRedoButtons();
+        };
+
+        const undo = () => {
+            if (historyIndex > 0) {
+                isHistoryAction = true;
+                historyIndex--;
+                canvas.loadFromJSON(stateHistory[historyIndex], () => {
+                    canvas.renderAll();
+                    updateLayersPanel();
+                    isHistoryAction = false;
+                });
+                updateUndoRedoButtons();
+            }
+        };
+
+        const redo = () => {
+            if (historyIndex < stateHistory.length - 1) {
+                isHistoryAction = true;
+                historyIndex++;
+                canvas.loadFromJSON(stateHistory[historyIndex], () => {
+                    canvas.renderAll();
+                    updateLayersPanel();
+                    isHistoryAction = false;
+                });
+                updateUndoRedoButtons();
+            }
+        };
+
+        const clearHistory = () => {
+            stateHistory = [];
+            historyIndex = -1;
+            updateUndoRedoButtons();
+        };
+        
+        const updateUndoRedoButtons = () => {
+            undoBtn.disabled = historyIndex <= 0;
+            redoBtn.disabled = historyIndex >= stateHistory.length - 1;
+        };
+        
+        undoBtn.addEventListener('click', undo);
+        redoBtn.addEventListener('click', redo);
+
+
+        // --- ZOOM LOGIC ---
+        const setCanvasSize = (scale) => {
+            if (!canvas || !canvas.originalWidth) return;
+            
+            const newWidth = canvas.originalWidth * scale;
+            const newHeight = canvas.originalHeight * scale;
+
+            canvas.setDimensions({ width: newWidth, height: newHeight });
+            canvas.setZoom(scale);
+            canvas.renderAll();
+            zoomLevelInput.value = `${Math.round(scale * 100)}%`;
+        };
+
+        const autoFitCanvas = () => {
+            if (!canvas) return;
+            const container = document.querySelector('.flex-grow.flex.items-center.justify-center.p-4.overflow-auto');
+            const padding = 32; // p-4 on the container
+            
+            const containerWidth = container.clientWidth - padding;
+            const containerHeight = container.clientHeight - padding;
+
+            const scaleX = containerWidth / canvas.originalWidth;
+            const scaleY = containerHeight / canvas.originalHeight;
+
+            const scale = Math.min(scaleX, scaleY);
+            setCanvasSize(scale);
+        };
+
+        zoomInBtn.addEventListener('click', () => {
+            const currentZoom = canvas.getZoom();
+            setCanvasSize(currentZoom * 1.1);
+        });
+        zoomOutBtn.addEventListener('click', () => {
+            const currentZoom = canvas.getZoom();
+            setCanvasSize(currentZoom / 1.1);
+        });
+
+
+        // --- EXPORT LOGIC ---
+        async function dataURLtoFile(dataurl, filename) {
+            const arr = dataurl.split(',');
+            const mimeMatch = arr[0].match(/:(.*?);/);
+            if (!mimeMatch) return null;
+            const mime = mimeMatch[1];
+            const bstr = atob(arr[1]);
+            let n = bstr.length;
+            const u8arr = new Uint8Array(n);
+            while (n--) {
+                u8arr[n] = bstr.charCodeAt(n);
+            }
+            return new File([u8arr], filename, {type: mime});
+        }
+
+        const exportCanvas = async (format) => {
+            const currentZoom = canvas.getZoom();
+            // Temporarily reset to full resolution for export
+            setCanvasSize(1);
+            
+            const fileName = `${projectNameEl.textContent.trim().replace(/\s+/g, '_')}.${format}`;
+            const filePath = `templates/${fileName}`;
+            let fileToUpload = null;
+            let downloadUrl = null;
+
+            // Generate file object for upload and get the download URL
+            if (format === 'pdf') {
+                const dataURL = canvas.toDataURL({ format: 'png', quality: 1.0 });
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF({
+                    orientation: canvas.originalWidth > canvas.originalHeight ? 'landscape' : 'portrait',
+                    unit: 'px',
+                    format: [canvas.originalWidth, canvas.originalHeight]
+                });
+                pdf.addImage(dataURL, 'PNG', 0, 0, canvas.originalWidth, canvas.originalHeight);
+                const pdfBlob = pdf.output('blob');
+                fileToUpload = new File([pdfBlob], fileName, { type: 'application/pdf' });
+                downloadUrl = URL.createObjectURL(pdfBlob);
+
+            } else if (format === 'svg') {
+                const svg = canvas.toSVG();
+                const svgBlob = new Blob([svg], { type: 'image/svg+xml' });
+                fileToUpload = new File([svgBlob], fileName, { type: 'image/svg+xml' });
+                downloadUrl = URL.createObjectURL(svgBlob);
+
+            } else { // For PNG, JPEG
+                 const dataURL = canvas.toDataURL({
+                     format: format,
+                     quality: 1.0,
+                     multiplier: 1
+                });
+                fileToUpload = await dataURLtoFile(dataURL, fileName);
+                downloadUrl = dataURL;
+            }
+
+            // Restore canvas size right after generating data
+            setCanvasSize(currentZoom);
+            
+            // --- UPLOAD TO SUPABASE ---
+            if (supabaseClient && fileToUpload) {
+                showToast(`Uploading ${format.toUpperCase()}...`, 'info');
+                const { data, error } = await supabaseClient.storage
+                    .from('wike') // Your bucket name
+                    .upload(filePath, fileToUpload, {
+                        cacheControl: '3600',
+                        upsert: true // Overwrite file if it exists
+                    });
+
+                if (error) {
+                    console.error('Supabase Upload Error:', error);
+                    showToast(`Upload Error: ${error.message}`, 'error');
+                } else {
+                    console.log('Supabase Upload Success:', data);
+                    showToast('Successfully uploaded to Supabase!', 'success');
+                }
+            } else if (!supabaseClient) {
+                console.log('Skipping Supabase upload: client not configured.');
+            }
+
+            // --- TRIGGER DOWNLOAD ---
+            const a = document.createElement('a');
+            a.href = downloadUrl;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            // Revoke object URL for blobs to free memory
+            if (format === 'svg' || format === 'pdf') {
+                URL.revokeObjectURL(downloadUrl);
+            }
+        };
+
+        exportBtn.addEventListener('click', () => exportMenu.classList.toggle('hidden'));
+        document.addEventListener('click', (e) => {
+            if (!exportBtn.contains(e.target) && !exportMenu.contains(e.target)) {
+                exportMenu.classList.add('hidden');
+            }
+        });
+        
+        document.querySelectorAll('.export-option').forEach(option => {
+            option.addEventListener('click', async (e) => { // Made async
+                e.preventDefault();
+                const format = e.target.dataset.format;
+                exportMenu.classList.add('hidden'); // Hide menu immediately
+                await exportCanvas(format); // Await the export process
+            });
+        });
+
+        // --- KEYBOARD SHORTCUTS ---
+        window.addEventListener('keydown', (e) => {
+            if (editor.classList.contains('hidden')) return; // Only in editor
+            
+            // Ctrl/Cmd + Z for Undo
+            if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+                e.preventDefault();
+                undo();
+            }
+            
+            // Ctrl/Cmd + Y for Redo
+            if ((e.ctrlKey || e.metaKey) && e.key === 'y') {
+                e.preventDefault();
+                redo();
+            }
+            
+            // Delete/Backspace
+            if ((e.key === 'Delete' || e.key === 'Backspace') && canvas.getActiveObject()) {
+                 const activeObject = canvas.getActiveObject();
+                 // If we are editing text, don't delete the object
+                 if (activeObject.isEditing) {
+                     return;
+                 }
+                 e.preventDefault();
+                 const activeObjects = canvas.getActiveObjects();
+                 if (activeObjects.length) {
+                     activeObjects.forEach(obj => canvas.remove(obj));
+                     canvas.discardActiveObject();
+                     canvas.renderAll();
+                 }
+            }
+        });
+
+
+        // --- EVENT LISTENERS & APP START ---
+        backToHomeBtn.addEventListener('click', showHomepage);
+
+        templateGallery.addEventListener('click', (e) => {
+            const btn = e.target.closest('.edit-template-btn');
+            if (btn) {
+                const templateId = btn.dataset.templateId;
+                initEditor(templateId);
+            }
+        });
+
+        document.getElementById('search-templates').addEventListener('input', (e) => {
+            const searchTerm = e.target.value.toLowerCase();
+            document.querySelectorAll('.template-card').forEach(card => {
+                const name = card.querySelector('h3').textContent.toLowerCase();
+                const category = card.querySelector('p').textContent.toLowerCase();
+                if (name.includes(searchTerm) || category.includes(searchTerm)) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        });
+        
+        layersToggleBtn.addEventListener('click', () => {
+            layersPanel.classList.toggle('hidden');
+        });
+
+        // --- MODIFIED: Save project to Supabase Database ---
+        document.getElementById('save-project-btn').addEventListener('click', async () => {
+            if (!canvas) {
+                showToast('Editor not active.', 'error');
+                return;
+            }
+            if (!supabaseClient) {
+                showToast('Supabase not configured. Cannot save to database.', 'error');
+                return;
+            }
+
+            const projectName = projectNameEl.textContent.trim();
+            const projectData = canvas.toObject();
+            const originalTemplate = templates.find(t => t.name === projectName);
+
+            showToast('Saving to database...', 'info');
+
+            try {
+                const { data, error } = await supabaseClient
+                    .from('templates') // Your table name
+                    .insert([{
+                        name: projectName,
+                        project_data: projectData, // This column should be JSON or JSONB
+                        preview_url: originalTemplate ? originalTemplate.preview : 'https://placehold.co/400x300/cccccc/ffffff?text=Saved'
+                    }])
+                    .select();
+
+                if (error) {
+                    console.error('Supabase Save Error:', error);
+                    showToast(`Database Save Error: ${error.message}`, 'error');
+                } else {
+                    console.log('Supabase Save Success:', data);
+                    showToast('Successfully saved project to the database!', 'success');
+                }
+            } catch (error) {
+                console.error("Failed to save project to Supabase:", error);
+                showToast('An unexpected error occurred while saving.', 'error');
+            }
+        });
+
+
+        // Add resize listener for auto-fitting
+        let resizeTimeout;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(autoFitCanvas, 150);
+        });
+
+        // Initialize the app
+        initTheme();
+        initHomepage();
+        showHomepage();
+        
+        // Attempt to load a saved project
+        const savedProject = localStorage.getItem('pixelcraft_project');
+        if (savedProject) {
+            // This part is a placeholder - a real app would prompt the user.
+            // For now, it won't auto-load, but demonstrates saving is possible.
+            console.log("A saved project was found in local storage.");
+        }
+    });
+    </script>
+</body>
+</html>

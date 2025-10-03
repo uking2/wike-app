@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en" class="">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Visual Content Editor</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Fabric.js CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
+
+    <!-- jsPDF for PDF Export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    
+    <!-- Supabase CDN for Storage -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <!-- Font Awesome CDN for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" xintegrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lobster&family=Pacifico&family=Playfair+Display:wght@700&family=Roboto+Mono&family=Anton&family=Bebas+Neue&family=Montserrat&family=Oswald&family=Georgia&family=Impact&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = { darkMode: 'class' }
+    </script>
+
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        .sidebar-icon-btn.active { background-color: #eef2ff; color: #4338ca; }
+        .dark .sidebar-icon-btn.active { background-color: #3730a3; color: #e0e7ff; }
+        
+        .props-input {
+            width: 100%; padding: 0.5rem; border-radius: 0.375rem; border: 1px solid #d1d5db; background-color: #f9fafb;
+        }
+        .dark .props-input { background-color: #374151; border-color: #4b5563; color: #d1d5db; }
+
+        #canvas-wrapper { position: relative; }
+
+        #editor-container {
+            display: grid;
+            height: 100vh;
+            grid-template-rows: 60px auto 1fr;
+            grid-template-columns: 80px 0px 1fr 0px;
+            transition: grid-template-columns 0.3s ease-in-out;
+        }
+
+        #tool-panels-container, #properties-panel {
+            overflow: hidden;
+            transition: opacity 0.3s ease-in-out;
+        }
+        
+        #text-context-header {
+            transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
+        }
+
+        .template-item { 
+            cursor: pointer; 
+            transition: all 0.2s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .template-item:hover { transform: scale(1.05); box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .template-preview { 
+            width: 100%; 
+            height: 120px; 
+            object-fit: cover; 
+            border-radius: 0.375rem;
+            background-color: #f3f4f6;
+        }
+        .dark .template-preview { background-color: #374151; }
+        .template-name { 
+            font-size: 0.75rem; 
+            margin-top: 0.25rem; 
+            text-align: center; 
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .control-btn {
+            background-color: #f3f4f6;
+            border-radius: 0.375rem;
+            padding: 0.5rem;
+            transition: background-color 0.2s;
+        }
+        .dark .control-btn {
+            background-color: #374151;
+        }
+        .control-btn:hover {
+            background-color: #e5e7eb;
+        }
+        .dark .control-btn:hover {
+            background-color: #4b5563;
+        }
+        .control-btn.active, #font-bold.active, #font-italic.active, #font-underline.active, [id^="text-align-"].active {
+            background-color: #eef2ff;
+            color: #4338ca;
+        }
+        .dark .control-btn.active, .dark #font-bold.active, .dark #font-italic.active, .dark #font-underline.active, .dark [id^="text-align-"].active {
+            background-color: #3730a3;
+            color: #e0e7ff;
+        }
+        #right-panel-resizer {
+            z-index: 10;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 overflow-hidden">
+
+    <div id="editor-container">
+        <!-- 1. Top Bar -->
+        <header class="col-span-full bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-2 flex items-center justify-between z-20 shadow-sm" style="grid-row: 1; grid-column: 1 / -1;">
+            <div class="flex items-center gap-2 justify-start w-auto">
+                <button id="undo-btn" class="px-3 py-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50" title="Undo (Ctrl+Z)"><i class="fas fa-undo"></i></button>
+                <button id="redo-btn" class="px-3 py-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50" title="Redo (Ctrl+Y)"><i class="fas fa-redo"></i></button>
+                <button id="clear-canvas-btn" class="px-3 py-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700" title="Clear Page"><i class="fas fa-trash"></i></button>
+                <button id="home-btn" class="px-3 py-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700" title="Home" onclick="window.location.href='../home/home.html'">
+    <i class="fas fa-home"></i>
+</button>
+                
+                <div class="border-l h-6 mx-2 dark:border-gray-600"></div>
+
+                <!-- Moved Object Controls -->
+                <div id="top-object-controls" class="hidden items-center gap-2">
+                    <div class="flex items-center gap-1 w-28 text-sm" title="Opacity">
+                        <i class="fas fa-eye text-gray-500"></i>
+                        <input type="range" id="opacity" min="0" max="1" step="0.01" class="w-full">
+                    </div>
+                    <button id="bring-forward" class="px-3 py-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700" title="Forward"><i class="fas fa-arrow-up"></i></button>
+                    <button id="send-backward" class="px-3 py-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700" title="Backward"><i class="fas fa-arrow-down"></i></button>
+                    <button id="lock-object" class="px-3 py-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700" title="Lock"><i class="fas fa-lock-open"></i></button>
+                    <button id="delete-object" class="px-3 py-2 rounded-md hover:bg-red-100 text-red-600 dark:hover:bg-red-900/50" title="Delete"><i class="fas fa-trash"></i></button>
+                </div>
+            </div>
+            <div class="flex-1 flex justify-center items-center gap-4">
+                <div id="document-title" class="text-sm font-semibold" contenteditable="true">My Creative Design</div>
+                 <div class="flex items-center gap-2 border-l pl-4 ml-4 dark:border-gray-600">
+                    <button id="prev-page-btn" class="px-3 py-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50" title="Previous Page"><i class="fas fa-chevron-left"></i></button>
+                    <span id="page-indicator" class="text-sm font-medium">Page 1 / 1</span>
+                    <button id="next-page-btn" class="px-3 py-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50" title="Next Page"><i class="fas fa-chevron-right"></i></button>
+                    <button id="add-page-btn" class="px-3 py-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700" title="Add Page"><i class="fas fa-plus"></i></button>
+                    <button id="delete-page-btn" class="px-3 py-2 rounded-md hover:bg-red-100 text-red-600 dark:hover:bg-red-900/50 disabled:opacity-50" title="Delete Page"><i class="fas fa-trash-alt"></i></button>
+                </div>
+                <div class="flex items-center gap-2 w-48"><i class="fas fa-search-minus"></i><input type="range" id="zoom-slider" min="0.2" max="3" step="0.01" value="1" class="w-full"><i class="fas fa-search-plus"></i></div>
+            </div>
+            <div class="flex items-center gap-3 justify-end w-auto">
+                <button id="resize-btn" class="text-sm px-3 py-1.5 rounded-md border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700"><i class="fas fa-expand-alt mr-2"></i>Resize</button>
+                <button id="theme-toggle-btn" class="px-3 py-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700" title="Toggle Theme"><i class="fas fa-moon"></i></button>
+                <div class="relative">
+                    <button id="export-btn" class="text-sm font-medium text-white bg-indigo-600 rounded-md px-4 py-2 hover:bg-indigo-700"><i class="fas fa-download mr-2"></i>Export</button>
+                    <div id="export-options" class="hidden absolute right-0 mt-2 w-48 bg-white dark:bg-gray-700 rounded-md shadow-lg z-20">
+                        <a href="#" id="export-png" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600">Download as PNG</a>
+                        <a href="#" id="export-jpg" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600">Download as JPG</a>
+                        <a href="#" id="export-pdf" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600">Download as PDF</a>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Contextual Text Header -->
+        <div id="text-context-header" class="col-span-full bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-2 flex items-center justify-center gap-2 z-10 shadow-sm hidden opacity-0 -translate-y-full" style="grid-row: 2; grid-column: 1 / -1;">
+             <select id="font-family" class="props-input w-40"></select>
+             <input type="number" id="font-size" min="1" class="props-input w-20">
+             <input type="color" id="font-color" class="props-input h-9 p-1 w-10">
+             <div class="flex items-center border rounded-md dark:border-gray-600">
+                 <button id="font-bold" title="Bold" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-l-md"><i class="fas fa-bold"></i></button>
+                 <button id="font-italic" title="Italic" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 border-l dark:border-gray-600"><i class="fas fa-italic"></i></button>
+                 <button id="font-underline" title="Underline" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 border-l dark:border-gray-600"><i class="fas fa-underline"></i></button>
+             </div>
+             <div class="flex items-center border rounded-md dark:border-gray-600">
+                 <button id="text-align-left" title="Align Left" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-l-md"><i class="fas fa-align-left"></i></button>
+                 <button id="text-align-center" title="Align Center" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 border-l dark:border-gray-600"><i class="fas fa-align-center"></i></button>
+                 <button id="text-align-right" title="Align Right" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 border-l dark:border-gray-600 rounded-r-md"><i class="fas fa-align-right"></i></button>
+             </div>
+             <div class="relative">
+                 <button id="effects-btn" class="px-3 py-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"><i class="fas fa-magic-wand-sparkles mr-2"></i>Effects</button>
+                 <div id="effects-popover" class="hidden absolute top-full left-1/2 -translate-x-1/2 mt-2 w-72 bg-white dark:bg-gray-800 rounded-md shadow-lg z-20 p-4 space-y-4">
+                     <div><label class="text-sm">Curve</label><input type="range" id="text-curve" min="-180" max="180" value="0" class="w-full"></div>
+                     <hr class="dark:border-gray-600">
+                     <div>
+                         <label class="text-sm">Outline</label>
+                         <div class="grid grid-cols-2 gap-2">
+                             <input type="color" id="text-stroke-color" class="props-input h-10 p-1" title="Outline Color">
+                             <input type="number" id="text-stroke-width" min="0" class="props-input" placeholder="Width">
+                         </div>
+                     </div>
+                      <hr class="dark:border-gray-600">
+                     <div>
+                         <label class="text-sm">Shadow</label>
+                         <div class="p-2 bg-gray-50 dark:bg-gray-700/50 rounded-md space-y-2">
+                             <div class="grid grid-cols-2 gap-2">
+                                 <input type="color" id="text-shadow-color" class="props-input h-10 p-1" title="Shadow Color">
+                                 <input type="number" id="text-shadow-blur" min="0" class="props-input" placeholder="Blur">
+                             </div>
+                             <div class="grid grid-cols-2 gap-2">
+                                 <input type="number" id="text-shadow-offsetX" class="props-input" placeholder="Offset X">
+                                 <input type="number" id="text-shadow-offsetY" class="props-input" placeholder="Offset Y">
+                             </div>
+                         </div>
+                     </div>
+                 </div>
+             </div>
+        </div>
+
+        <!-- 2. Left Icon Sidebar -->
+        <aside class="row-span-1 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 p-2 flex flex-col items-center gap-2" style="grid-column: 1; grid-row: 3;">
+            <button id="templates-btn" data-panel="templates-panel" class="sidebar-icon-btn w-full flex flex-col items-center p-2 rounded-md" title="Templates"><i class="fas fa-layer-group text-xl"></i><span class="text-xs mt-1">Templates</span></button>
+            <button data-panel="text-panel" class="sidebar-icon-btn w-full flex flex-col items-center p-2 rounded-md" title="Text"><i class="fas fa-font text-xl"></i><span class="text-xs mt-1">Text</span></button>
+            <button data-panel="shapes-panel" class="sidebar-icon-btn w-full flex flex-col items-center p-2 rounded-md" title="Shapes"><i class="fas fa-shapes text-xl"></i><span class="text-xs mt-1">Shapes</span></button>
+            <button data-panel="uploads-panel" class="sidebar-icon-btn w-full flex flex-col items-center p-2 rounded-md" title="Uploads"><i class="fas fa-image text-xl"></i><span class="text-xs mt-1">Images</span></button>
+            <button data-panel="frames-panel" class="sidebar-icon-btn w-full flex flex-col items-center p-2 rounded-md" title="Frames"><i class="fas fa-border-all text-xl"></i><span class="text-xs mt-1">Frames</span></button>
+            <button data-panel="background-panel" class="sidebar-icon-btn w-full flex flex-col items-center p-2 rounded-md" title="Background"><i class="fas fa-palette text-xl"></i><span class="text-xs mt-1">Background</span></button>
+            <button data-panel="ai-tools-panel" class="sidebar-icon-btn w-full flex flex-col items-center p-2 rounded-md" title="AI Tools"><i class="fas fa-wand-magic-sparkles text-xl"></i><span class="text-xs mt-1">AI Tools</span></button>
+            <button data-panel="qrcode-panel" class="sidebar-icon-btn w-full flex flex-col items-center p-2 rounded-md" title="QR Code"><i class="fas fa-qrcode text-xl"></i><span class="text-xs mt-1">QR code</span></button>
+        </aside>
+
+        <!-- 3. Left Tool Panels -->
+        <div id="tool-panels-container" class="row-span-1 bg-gray-50 dark:bg-gray-800/50 border-r border-gray-200 dark:border-gray-700 overflow-y-auto no-scrollbar p-4 flex-col" style="grid-column: 2; grid-row: 3;">
+            <div id="text-panel" class="sidebar-panel hidden"><h3 class="font-bold mb-4 text-lg">Text</h3><div class="grid grid-cols-3 gap-2 text-center mb-4"><button id="add-heading-btn" class="bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 p-2 rounded-md text-xs font-bold">Heading</button><button id="add-subheading-btn" class="bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 p-2 rounded-md text-xs font-semibold">Subheading</button><button id="add-body-btn" class="bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 p-2 rounded-md text-xs">Body</button></div><hr class="my-4 dark:border-gray-600"><h4 class="font-semibold mb-2">Text Styles</h4><div id="text-styles-grid" class="grid grid-cols-2 gap-2"></div></div>
+            <div id="shapes-panel" class="sidebar-panel hidden"><h3 class="font-bold mb-4 text-lg">Shapes</h3><div id="shapes-grid" class="grid grid-cols-4 gap-3"></div></div>
+            <div id="uploads-panel" class="sidebar-panel hidden"><h3 class="font-bold mb-4 text-lg">Images & Uploads</h3><label for="image-upload-input" class="w-full text-center bg-indigo-600 text-white p-3 rounded-md cursor-pointer block mb-4"><i class="fas fa-cloud-upload-alt mr-2"></i>Upload Image</label><input id="image-upload-input" type="file" class="hidden" accept="image/*"><div id="images-grid" class="grid grid-cols-2 gap-2"></div></div>
+            <div id="frames-panel" class="sidebar-panel hidden"><h3 class="font-bold mb-4 text-lg">Frames</h3><div id="frames-grid" class="grid grid-cols-3 gap-2"></div></div>
+            <div id="background-panel" class="sidebar-panel hidden"><h3 class="font-bold mb-4 text-lg">Background</h3><div><label for="bg-color-input">Color</label><input type="color" id="bg-color-input" class="w-full h-10 p-1 props-input"></div></div>
+            <div id="ai-tools-panel" class="sidebar-panel hidden">
+                <h3 class="font-bold mb-4 text-lg">AI Image Generation</h3>
+                <div class="space-y-4">
+                    <div>
+                        <label for="ai-prompt" class="block text-sm font-medium mb-1">Description</label>
+                        <textarea id="ai-prompt" class="props-input h-24" placeholder="e.g., A cat wearing a spacesuit on Mars"></textarea>
+                    </div>
+                    <div>
+                        <label for="ai-style" class="block text-sm font-medium mb-1">Art Style</label>
+                        <select id="ai-style" class="props-input">
+                            <option value="realistic">Realistic</option>
+                            <option value="artistic">Artistic</option>
+                            <option value="cartoon">Cartoon</option>
+                            <option value="abstract">Abstract</option>
+                            <option value="cyberpunk">Cyberpunk</option>
+                            <option value="vintage">Vintage</option>
+                            <option value="anime">Anime</option>
+                            <option value="fantasy">Fantasy</option>
+                        </select>
+                    </div>
+                    <button id="ai-generate-btn" class="w-full mt-2 bg-indigo-600 text-white p-2 rounded-md hover:bg-indigo-700 text-sm flex items-center justify-center disabled:opacity-50">
+                        <span class="btn-text">Generate Image</span>
+                        <span class="loading-spinner hidden ml-2 w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                    </button>
+                </div>
+            </div>
+            <div id="qrcode-panel" class="sidebar-panel hidden">
+                <h3 class="font-bold mb-4 text-lg">QR Code Generator</h3>
+                <div class="space-y-4">
+                     <div>
+                        <label for="qr-input" class="block text-sm font-medium mb-1">Text or URL</label>
+                        <textarea id="qr-input" class="props-input h-24" placeholder="e.g., https://example.com"></textarea>
+                    </div>
+                    <button id="qr-generate-btn" class="w-full mt-2 bg-indigo-600 text-white p-2 rounded-md hover:bg-indigo-700 text-sm flex items-center justify-center disabled:opacity-50">
+                        <span class="btn-text">Generate & Add to Canvas</span>
+                        <span class="loading-spinner hidden ml-2 w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. Main Canvas Area -->
+        <main id="main-content" class="flex items-center justify-center p-4 overflow-hidden" style="grid-column: 3; grid-row: 3;">
+            <div id="canvas-wrapper" class="bg-white rounded-sm shadow-lg">
+                <canvas id="c"></canvas>
+            </div>
+        </main>
+
+        <!-- 5. Right Properties Panel -->
+        <aside id="properties-panel" class="relative bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 flex flex-col opacity-0" style="grid-column: 4; grid-row: 3;">
+            <div id="right-panel-resizer" class="absolute top-0 left-0 w-2 h-full cursor-col-resize bg-gray-300 dark:bg-gray-700 hover:bg-indigo-500 transition-colors z-10"></div>
+            <div class="overflow-y-auto no-scrollbar p-4 pl-6">
+                <div class="flex-grow">
+                    <div id="no-selection" class="text-center text-gray-500 mt-10">Select an object to edit its properties.</div>
+                    <div id="props-content" class="hidden">
+                        <div id="fill-stroke-props" class="prop-section hidden space-y-4"><h4 class="font-semibold">Fill & Stroke</h4><div><label>Fill Color</label><input type="color" id="fill-color" class="props-input h-10 p-1"></div><div><label>Stroke Color</label><input type="color" id="stroke-color" class="props-input h-10 p-1"></div><div><label>Stroke Width</label><input type="number" id="stroke-width" min="0" class="props-input"></div></div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- 6. Bottom Toolbar -->
+        <footer class="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-2 flex items-center justify-between z-10" style="grid-column: 1 / -1; grid-row: 4;">
+        </footer>
+    </div>
+
+     <!-- Templates Modal -->
+    <div id="templates-modal" class="hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-4xl h-5/6 flex flex-col">
+            <div class="p-4 border-b dark:border-gray-700 flex justify-between items-center">
+                <h3 class="text-lg font-bold">Choose a Template</h3>
+                <button id="close-templates-modal" class="text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 text-2xl">&times;</button>
+            </div>
+            <div class="p-4">
+                <div class="relative"><input type="search" id="template-search" placeholder="Search templates..." class="props-input pl-8 w-full"><i class="fas fa-search absolute left-2 top-2.5 text-gray-400"></i></div>
+            </div>
+            <div id="templates-grid-modal" class="p-4 overflow-y-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 flex-1">
+                <!-- Templates will be populated here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Resize Modal -->
+    <div id="resize-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-md">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold">Resize Canvas</h3>
+                <button id="close-resize-modal" class="text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 text-2xl">&times;</button>
+            </div>
+            <div class="mb-4">
+                <h4 class="font-semibold mb-2 text-sm">Presets</h4>
+                <div class="grid grid-cols-2 gap-2 text-sm">
+                    <button class="preset-btn p-2 border dark:border-gray-600 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700" data-width="1080" data-height="1080">Instagram Post</button>
+                    <button class="preset-btn p-2 border dark:border-gray-600 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700" data-width="1080" data-height="1920">Instagram Story</button>
+                    <button class="preset-btn p-2 border dark:border-gray-600 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700" data-width="1280" data-height="720">YouTube Thumbnail</button>
+                    <button class="preset-btn p-2 border dark:border-gray-600 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700" data-width="940" data-height="788">Facebook Post</button>
+                </div>
+            </div>
+            <div>
+                <h4 class="font-semibold mb-2 text-sm">Custom Size</h4>
+                <div class="flex items-center gap-4">
+                    <div class="flex-1">
+                        <label for="custom-width" class="block text-xs mb-1">Width (px)</label>
+                        <input type="number" id="custom-width" class="props-input" value="800">
+                    </div>
+                    <div class="flex-1">
+                        <label for="custom-height" class="block text-xs mb-1">Height (px)</label>
+                        <input type="number" id="custom-height" class="props-input" value="600">
+                    </div>
+                </div>
+            </div>
+            <div class="mt-6 flex justify-end gap-3">
+                <button id="cancel-resize-btn" class="px-4 py-2 rounded-md border dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm">Cancel</button>
+                <button id="confirm-resize-btn" class="px-4 py-2 rounded-md bg-indigo-600 text-white hover:bg-indigo-700 text-sm">Resize</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div id="confirm-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-sm">
+            <h3 id="confirm-modal-title" class="text-lg font-bold mb-4">Are you sure?</h3>
+            <p id="confirm-modal-body" class="mb-6 text-sm text-gray-600 dark:text-gray-300"></p>
+            <div class="flex justify-end gap-3">
+                <button id="confirm-modal-cancel" class="px-4 py-2 rounded-md border dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm">Cancel</button>
+                <button id="confirm-modal-confirm" class="px-4 py-2 rounded-md bg-red-600 text-white hover:bg-red-700 text-sm">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="notification-toast" class="hidden fixed bottom-5 right-5 bg-gray-800 text-white dark:bg-gray-200 dark:text-gray-800 px-4 py-3 rounded-md shadow-lg transition-opacity duration-300 opacity-0">
+        <p id="notification-message"></p>
+    </div>
+    
+    <!-- Right-Click Context Menu -->
+    <div id="context-menu" class="hidden absolute bg-white dark:bg-gray-800 rounded-md shadow-lg z-50 p-3 space-y-2 border dark:border-gray-600 w-48">
+        <h5 class="text-xs font-bold mb-1 uppercase tracking-wider text-gray-500">Quick Edit</h5>
+        <div class="space-y-2">
+            <div>
+                <label for="ctx-fill-color" class="text-sm block mb-1">Fill</label>
+                <input type="color" id="ctx-fill-color" class="props-input h-8 p-1 w-full">
+            </div>
+            <div>
+                <label for="ctx-stroke-color" class="text-sm block mb-1">Stroke</label>
+                <input type="color" id="ctx-stroke-color" class="props-input h-8 p-1 w-full">
+            </div>
+            <div>
+                <label for="ctx-stroke-width" class="text-sm block mb-1">Width</label>
+                <input type="number" id="ctx-stroke-width" min="0" class="props-input w-full">
+            </div>
+        </div>
+    </div>
+<script src="script.js"></script>
+</body>
+</html>

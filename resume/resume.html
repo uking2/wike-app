@@ -1,0 +1,1064 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Resume Builder</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <!-- Supabase Client Library -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a;
+            /* Dark Blue Gray */
+            color: #e2e8f0;
+        }
+
+        .ai-message-box {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            padding: 1rem 2rem;
+            border-radius: 9999px;
+            background-color: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: opacity 0.5s ease-in-out;
+            pointer-events: none;
+            opacity: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .ai-message-box.show {
+            opacity: 1;
+        }
+
+        /* Custom scrollbar for dark theme */
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #1e293b;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background-color: #475569;
+            border-radius: 20px;
+            border: 2px solid #1e293b;
+        }
+
+        .resume-preview-container {
+            font-size: 10px;
+            line-height: 1.4;
+        }
+
+        /* Styles for Classic Template */
+        .classic .section-title {
+            text-transform: uppercase;
+            font-weight: bold;
+            letter-spacing: 1px;
+            border-bottom: 1px solid #cbd5e1;
+            padding-bottom: 2px;
+            margin-bottom: 8px;
+        }
+
+        /* Styles for Modern Template */
+        .modern .section-title {
+            color: #0f172a;
+            background-color: #94a3b8;
+            padding: 4px 8px;
+            margin: 0 -2rem 8px;
+            border-radius: 4px;
+        }
+
+        /* Styles for Creative Template */
+        .creative .section-title {
+            color: #94a3b8;
+            font-weight: 700;
+            font-style: italic;
+            border-left: 3px solid #64748b;
+            padding-left: 8px;
+            margin-bottom: 8px;
+        }
+
+        @page {
+            size: A4;
+            margin: 0;
+        }
+
+        @media print {
+            body {
+                background-color: #fff !important;
+                color: #000 !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            .no-print {
+                display: none !important;
+            }
+
+            .resume-preview {
+                box-shadow: none !important;
+                border: none !important;
+                border-radius: 0 !important;
+                width: 100% !important;
+                height: 100% !important;
+                transform: scale(1) !important;
+                overflow: hidden !important;
+                margin: 0 !important;
+            }
+
+            .resume-preview-container {
+                font-size: 10pt;
+                line-height: 1.4;
+            }
+        }
+    </style>
+
+</head>
+
+
+<body class="flex flex-col md:flex-row h-screen overflow-hidden">
+
+
+    <!-- AI Message Box -->
+    <div id="ai-message-box" class="ai-message-box">
+        <i class="fas fa-magic text-fuchsia-300 animate-pulse"></i>
+        <span>Generating with AI...</span>
+    </div>
+
+    <!-- Sidebar & Controls (no-print) -->
+    <aside class="no-print w-full md:w-1/4 bg-slate-800 p-4 overflow-y-auto shadow-lg flex flex-col transition-all duration-300">
+        <h1 class="text-3xl font-bold text-sky-400 mb-6">AI Resume Builder</h1>
+<a href="../home/home.html" class="template-btn bg-slate-700 hover:bg-slate-600 text-sm font-semibold py-2 px-3 rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-400">
+    Home
+</a>
+        <!-- Template Selector -->
+        <div class="mb-6">
+            <h2 class="text-lg font-semibold mb-2">Templates</h2>
+            <div class="grid grid-cols-3 gap-2">
+
+                <button data-template="classic" class="template-btn bg-slate-700 hover:bg-slate-600 text-sm font-semibold py-2 px-3 rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-400 active">
+                    Classic
+                </button>
+                <button data-template="modern" class="template-btn bg-slate-700 hover:bg-slate-600 text-sm font-semibold py-2 px-3 rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-400">
+                    Modern
+                </button>
+                <button data-template="creative" class="template-btn bg-slate-700 hover:bg-slate-600 text-sm font-semibold py-2 px-3 rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-400">
+                    Creative
+                </button>
+            </div>
+        </div>
+
+        <!-- Section Navigation -->
+        <nav class="flex-grow mb-6">
+            <h2 class="text-lg font-semibold mb-2">Sections</h2>
+            <ul class="space-y-2">
+                <li><button data-section="personal" class="section-btn w-full text-left py-2 px-3 rounded-lg flex items-center gap-3 hover:bg-slate-700 transition-colors duration-200 active bg-slate-700"><i class="fas fa-user w-5 text-center"></i> Personal Info</button></li>
+                <li><button data-section="summary" class="section-btn w-full text-left py-2 px-3 rounded-lg flex items-center gap-3 hover:bg-slate-700 transition-colors duration-200"><i class="fas fa-book-open w-5 text-center"></i> Summary</button></li>
+                <li><button data-section="experience" class="section-btn w-full text-left py-2 px-3 rounded-lg flex items-center gap-3 hover:bg-slate-700 transition-colors duration-200"><i class="fas fa-briefcase w-5 text-center"></i> Experience</button></li>
+                <li><button data-section="education" class="section-btn w-full text-left py-2 px-3 rounded-lg flex items-center gap-3 hover:bg-slate-700 transition-colors duration-200"><i class="fas fa-graduation-cap w-5 text-center"></i> Education</button></li>
+                <li><button data-section="skills" class="section-btn w-full text-left py-2 px-3 rounded-lg flex items-center gap-3 hover:bg-slate-700 transition-colors duration-200"><i class="fas fa-code w-5 text-center"></i> Skills</button></li>
+                <li><button data-section="projects" class="section-btn w-full text-left py-2 px-3 rounded-lg flex items-center gap-3 hover:bg-slate-700 transition-colors duration-200"><i class="fas fa-project-diagram w-5 text-center"></i> Projects</button></li>
+                <li><button data-section="certifications" class="section-btn w-full text-left py-2 px-3 rounded-lg flex items-center gap-3 hover:bg-slate-700 transition-colors duration-200"><i class="fas fa-certificate w-5 text-center"></i> Certifications</button></li>
+                <li><button data-section="ats-checker" class="section-btn w-full text-left py-2 px-3 rounded-lg flex items-center gap-3 hover:bg-slate-700 transition-colors duration-200"><i class="fas fa-clipboard-check w-5 text-center"></i> ATS Checker</button></li>
+            </ul>
+        </nav>
+
+        <!-- Export Buttons -->
+        <div class="mt-auto space-y-2">
+            <button id="download-pdf-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl transition-colors duration-200 shadow-md">
+                <i class="fas fa-file-pdf mr-2"></i> Download PDF & Save to Cloud
+            </button>
+            <button id="print-btn" class="w-full bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 px-4 rounded-xl transition-colors duration-200 shadow-md">
+                <i class="fas fa-print mr-2"></i> Print
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 overflow-y-auto p-4 md:p-8 flex flex-col md:flex-row gap-6">
+
+        <!-- Form Section -->
+        <div class="no-print w-full md:w-1/2 p-6 bg-slate-900 rounded-2xl shadow-lg overflow-y-auto">
+            <form id="resume-form" class="space-y-6">
+
+                <!-- Personal Information Section -->
+                <div id="personal-section" class="section-content">
+                    <h2 class="text-2xl font-bold mb-4">Personal Information</h2>
+                    <div class="space-y-4">
+                        <input type="text" name="name" placeholder="Full Name" class="w-full p-3 rounded-lg bg-slate-800 border border-slate-700 focus:ring-2 focus:ring-blue-400 focus:border-blue-400">
+                        <input type="text" name="title" placeholder="Professional Title (e.g., Software Engineer)" class="w-full p-3 rounded-lg bg-slate-800 border border-slate-700 focus:ring-2 focus:ring-blue-400 focus:border-blue-400">
+                        <input type="email" name="email" placeholder="Email Address" class="w-full p-3 rounded-lg bg-slate-800 border border-slate-700 focus:ring-2 focus:ring-blue-400 focus:border-blue-400">
+                        <input type="tel" name="phone" placeholder="Phone Number" class="w-full p-3 rounded-lg bg-slate-800 border border-slate-700 focus:ring-2 focus:ring-blue-400 focus:border-blue-400">
+                        <input type="text" name="location" placeholder="City, State" class="w-full p-3 rounded-lg bg-slate-800 border border-slate-700 focus:ring-2 focus:ring-blue-400 focus:border-blue-400">
+                        <input type="url" name="linkedin" placeholder="LinkedIn URL" class="w-full p-3 rounded-lg bg-slate-800 border border-slate-700 focus:ring-2 focus:ring-blue-400 focus:border-blue-400">
+                        <input type="url" name="github" placeholder="GitHub URL" class="w-full p-3 rounded-lg bg-slate-800 border border-slate-700 focus:ring-2 focus:ring-blue-400 focus:border-blue-400">
+                    </div>
+                </div>
+
+                <!-- Professional Summary Section -->
+                <div id="summary-section" class="section-content hidden">
+                    <h2 class="text-2xl font-bold mb-4">Professional Summary</h2>
+                    <textarea name="summary" rows="5" placeholder="A brief summary of your professional background and skills." class="w-full p-3 rounded-lg bg-slate-800 border border-slate-700 focus:ring-2 focus:ring-blue-400 focus:border-blue-400"></textarea>
+                    <button type="button" class="ai-button mt-2 w-full bg-sky-600 hover:bg-sky-700 text-white font-bold py-2 rounded-xl transition-colors duration-200 text-sm" data-ai-action="summary">
+                        <i class="fas fa-magic mr-2"></i> Generate with AI
+                    </button>
+                </div>
+
+                <!-- Work Experience Section -->
+                <div id="experience-section" class="section-content hidden">
+                    <h2 class="text-2xl font-bold mb-4">Work Experience</h2>
+                    <div id="work-experience-container" class="space-y-4">
+                        <div class="work-experience-entry border-b border-slate-700 pb-4 last:border-b-0">
+                            <input type="text" name="company[]" placeholder="Company Name" class="w-full p-2 mb-2 rounded-lg bg-slate-800 border border-slate-700">
+                            <input type="text" name="job_title[]" placeholder="Job Title" class="w-full p-2 mb-2 rounded-lg bg-slate-800 border border-slate-700">
+                            <div class="flex gap-2 mb-2">
+                                <input type="text" name="start_date[]" placeholder="Start Date" class="w-1/2 p-2 rounded-lg bg-slate-800 border border-slate-700">
+                                <input type="text" name="end_date[]" placeholder="End Date" class="w-1/2 p-2 rounded-lg bg-slate-800 border border-slate-700">
+                            </div>
+                            <textarea name="job_description[]" rows="4" placeholder="Job Description (use bullet points)" class="w-full p-2 rounded-lg bg-slate-800 border border-slate-700"></textarea>
+                            <button type="button" class="ai-button mt-2 w-full bg-sky-600 hover:bg-sky-700 text-white font-bold py-2 rounded-xl transition-colors duration-200 text-sm" data-ai-action="experience">
+                                <i class="fas fa-magic mr-2"></i> Enhance with AI
+                            </button>
+                        </div>
+                    </div>
+                    <button type="button" id="add-experience" class="mt-4 w-full bg-slate-700 hover:bg-slate-600 text-white font-bold py-2 rounded-xl transition-colors duration-200">
+                        Add More Experience
+                    </button>
+                </div>
+
+                <!-- Education Section -->
+                <div id="education-section" class="section-content hidden">
+                    <h2 class="text-2xl font-bold mb-4">Education</h2>
+                    <div id="education-container" class="space-y-4">
+                        <div class="education-entry border-b border-slate-700 pb-4 last:border-b-0">
+                            <input type="text" name="school[]" placeholder="University/School" class="w-full p-2 mb-2 rounded-lg bg-slate-800 border border-slate-700">
+                            <input type="text" name="degree[]" placeholder="Degree/Major" class="w-full p-2 mb-2 rounded-lg bg-slate-800 border border-slate-700">
+                            <div class="flex gap-2 mb-2">
+                                <input type="text" name="edu_start[]" placeholder="Start Year" class="w-1/2 p-2 rounded-lg bg-slate-800 border border-slate-700">
+                                <input type="text" name="edu_end[]" placeholder="End Year" class="w-1/2 p-2 rounded-lg bg-slate-800 border border-slate-700">
+                            </div>
+                        </div>
+                    </div>
+                    <button type="button" id="add-education" class="mt-4 w-full bg-slate-700 hover:bg-slate-600 text-white font-bold py-2 rounded-xl transition-colors duration-200">
+                        Add More Education
+                    </button>
+                </div>
+
+                <!-- Skills Section -->
+                <div id="skills-section" class="section-content hidden">
+                    <h2 class="text-2xl font-bold mb-4">Skills</h2>
+                    <input type="text" name="skills" placeholder="Comma-separated skills (e.g., JavaScript, Python, React)" class="w-full p-3 rounded-lg bg-slate-800 border border-slate-700 focus:ring-2 focus:ring-blue-400 focus:border-blue-400">
+                    <button type="button" class="ai-button mt-2 w-full bg-sky-600 hover:bg-sky-700 text-white font-bold py-2 rounded-xl transition-colors duration-200 text-sm" data-ai-action="skills">
+                        <i class="fas fa-magic mr-2"></i> Suggest Skills with AI
+                    </button>
+                </div>
+
+                <!-- Projects Section -->
+                <div id="projects-section" class="section-content hidden">
+                    <h2 class="text-2xl font-bold mb-4">Projects</h2>
+                    <div id="projects-container" class="space-y-4">
+                        <div class="project-entry border-b border-slate-700 pb-4 last:border-b-0">
+                            <input type="text" name="project_name[]" placeholder="Project Name" class="w-full p-2 mb-2 rounded-lg bg-slate-800 border border-slate-700">
+                            <input type="url" name="project_url[]" placeholder="Project URL" class="w-full p-2 mb-2 rounded-lg bg-slate-800 border border-slate-700">
+                            <textarea name="project_description[]" rows="4" placeholder="Project Description (use bullet points)" class="w-full p-2 rounded-lg bg-slate-800 border border-slate-700"></textarea>
+                             <button type="button" class="ai-button mt-2 w-full bg-sky-600 hover:bg-sky-700 text-white font-bold py-2 rounded-xl transition-colors duration-200 text-sm" data-ai-action="project">
+                                <i class="fas fa-magic mr-2"></i> Enhance with AI
+                            </button>
+                        </div>
+                    </div>
+                    <button type="button" id="add-project" class="mt-4 w-full bg-slate-700 hover:bg-slate-600 text-white font-bold py-2 rounded-xl transition-colors duration-200">
+                        Add More Project
+                    </button>
+                </div>
+
+                <!-- Certifications Section -->
+                <div id="certifications-section" class="section-content hidden">
+                    <h2 class="text-2xl font-bold mb-4">Certifications</h2>
+                    <input type="text" name="certifications" placeholder="List certifications (e.g., AWS Certified Solutions Architect)" class="w-full p-3 rounded-lg bg-slate-800 border border-slate-700 focus:ring-2 focus:ring-blue-400 focus:border-blue-400">
+                </div>
+
+                <!-- ATS Checker Section -->
+                <div id="ats-checker-section" class="section-content hidden">
+                    <h2 class="text-2xl font-bold mb-4">ATS Analysis</h2>
+                    <div class="mb-4">
+                        <label for="ats-company-ref" class="block text-sm font-medium text-gray-400 mb-2">Target Company (for tailored analysis)</label>
+                        <input type="text" id="ats-company-ref" name="ats-company-ref" placeholder="e.g., Google, Microsoft, TCS" class="w-full p-3 rounded-lg bg-slate-800 border border-slate-700 focus:ring-2 focus:ring-blue-400 focus:border-blue-400">
+                    </div>
+                    <div id="ats-report" class="bg-slate-800 p-4 rounded-xl">
+                        <p class="text-gray-400">Enter a target company and click "Run ATS Analysis" to get a report on how well your resume matches its likely requirements.</p>
+                    </div>
+                    <button type="button" id="run-ats-btn" class="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded-xl transition-colors duration-200">
+                        <i class="fas fa-play-circle mr-2"></i> Run ATS Analysis
+                    </button>
+                </div>
+
+            </form>
+        </div>
+
+        <!-- Resume Preview Section -->
+        <div class="w-full md:w-1/2 flex items-start justify-center p-4">
+            <div id="resume-preview" class="resume-preview bg-white text-gray-900 rounded-lg shadow-xl overflow-y-auto w-full max-w-2xl transform scale-75 md:scale-100 origin-top transition-transform duration-300">
+                <div id="resume-content" class="p-8">
+                    <!-- Resume content will be rendered here -->
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            const form = document.getElementById('resume-form');
+            const previewContainer = document.getElementById('resume-content');
+            const sectionBtns = document.querySelectorAll('.section-btn');
+            const sections = document.querySelectorAll('.section-content');
+            const templateBtns = document.querySelectorAll('.template-btn');
+            const downloadPdfBtn = document.getElementById('download-pdf-btn');
+            const printBtn = document.getElementById('print-btn');
+            const aiMessageBox = document.getElementById('ai-message-box');
+            const runAtsBtn = document.getElementById('run-ats-btn');
+            const apiKey = "AIzaSyC3ZolnvIYAhjMmz7yegS_DH3ChBQVpyGA"; 
+
+            // --- SUPABASE SETUP ---
+            // 1. IMPORTANT: Replace these with your actual Supabase project URL and anon key.
+            const SUPABASE_URL = 'https://hehfnsaoibkvwdolcfkg.supabase.co'; 
+            const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhlaGZuc2FvaWJrdndkb2xjZmtnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgxOTc5MDUsImV4cCI6MjA3Mzc3MzkwNX0.aDpemN2HIGpORC-tZiQp0iIqXv7L4tO8zXvDCjygvbs';
+            
+            // 2. IMPORTANT: Go to your Supabase project's SQL Editor and run the CREATE TABLE script
+            //    provided in the conversation to create the 'resumes' table.
+            
+            let supabaseClient = null;
+            if (SUPABASE_URL !== 'YOUR_SUPABASE_URL' && SUPABASE_ANON_KEY !== 'YOUR_SUPABASE_ANON_KEY') {
+                try {
+                    supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                } catch(e) {
+                    console.error("Error initializing Supabase client:", e.message);
+                }
+            }
+             // --- END SUPABASE SETUP ---
+
+
+            const templateFunctions = {
+                classic: (data) => `
+                    <div class="resume-preview-container text-black classic p-4">
+                        <div class="text-center pb-4 mb-4 border-b border-gray-400">
+                            <h1 class="text-3xl font-bold uppercase">${data.personal.name || 'Full Name'}</h1>
+                            <p class="text-gray-600">${data.personal.title || 'Professional Title'}</p>
+                            <p class="text-sm text-gray-500 mt-2">
+                                ${data.personal.location || ''} ${data.personal.phone ? `| ${data.personal.phone}` : ''} | ${data.personal.email || ''}
+                            </p>
+                            <p class="text-sm text-gray-500">
+                                ${data.personal.linkedin ? `<a href="${data.personal.linkedin}" class="hover:underline">${data.personal.linkedin}</a>` : ''}
+                                ${data.personal.github ? ` | <a href="${data.personal.github}" class="hover:underline">${data.personal.github}</a>` : ''}
+                            </p>
+                        </div>
+                        ${data.summary.text ? `
+                            <div class="mb-6">
+                                <h2 class="section-title">Summary</h2>
+                                <p>${data.summary.text.replace(/\n/g, '<br>')}</p>
+                            </div>` : ''}
+                        ${data.experience.length ? `
+                            <div class="mb-6">
+                                <h2 class="section-title">Work Experience</h2>
+                                ${data.experience.map(exp => `
+                                    <div class="mb-4">
+                                        <div class="flex justify-between items-start">
+                                            <h3 class="font-bold">${exp.job_title} at ${exp.company}</h3>
+                                            <span class="text-gray-500 text-sm">${exp.start_date} - ${exp.end_date}</span>
+                                        </div>
+                                        <ul class="list-disc list-inside mt-1 space-y-1 text-sm">
+                                            ${exp.job_description.split('\n').map(item => item.trim() ? `<li>${item.trim()}</li>` : '').join('')}
+                                        </ul>
+                                    </div>`).join('')}
+                            </div>` : ''}
+                        ${data.education.length ? `
+                            <div class="mb-6">
+                                <h2 class="section-title">Education</h2>
+                                ${data.education.map(edu => `
+                                    <div class="flex justify-between items-start mb-2">
+                                        <div>
+                                            <h3 class="font-bold">${edu.degree}</h3>
+                                            <p class="text-sm">${edu.school}</p>
+                                        </div>
+                                        <span class="text-gray-500 text-sm">${edu.edu_start} - ${edu.edu_end}</span>
+                                    </div>`).join('')}
+                            </div>` : ''}
+                        ${data.skills.length ? `
+                            <div class="mb-6">
+                                <h2 class="section-title">Skills</h2>
+                                <p>${data.skills.join(', ')}</p>
+                            </div>` : ''}
+                        ${data.projects.length ? `
+                            <div class="mb-6">
+                                <h2 class="section-title">Projects</h2>
+                                ${data.projects.map(proj => `
+                                    <div class="mb-4">
+                                        <div class="flex justify-between items-start">
+                                            <h3 class="font-bold">${proj.project_name}</h3>
+                                            ${proj.project_url ? `<a href="${proj.project_url}" class="text-sm text-blue-600 hover:underline">Link</a>` : ''}
+                                        </div>
+                                        <ul class="list-disc list-inside mt-1 space-y-1 text-sm">
+                                            ${proj.project_description.split('\n').map(item => item.trim() ? `<li>${item.trim()}</li>` : '').join('')}
+                                        </ul>
+                                    </div>`).join('')}
+                            </div>` : ''}
+                        ${data.certifications.text ? `
+                            <div class="mb-6">
+                                <h2 class="section-title">Certifications</h2>
+                                <p>${data.certifications.text}</p>
+                            </div>` : ''}
+                    </div>
+                `,
+                modern: (data) => `
+                    <div class="resume-preview-container text-black modern">
+                        <div class="bg-slate-200 text-center p-6 rounded-t-lg">
+                            <h1 class="text-4xl font-bold text-slate-800">${data.personal.name || 'Full Name'}</h1>
+                            <p class="text-lg text-slate-600 font-medium">${data.personal.title || 'Professional Title'}</p>
+                            <div class="flex justify-center flex-wrap gap-x-4 gap-y-2 text-sm mt-3">
+                                ${data.personal.location ? `<span class="flex items-center gap-1 text-slate-600"><i class="fas fa-map-marker-alt"></i> ${data.personal.location}</span>` : ''}
+                                ${data.personal.phone ? `<span class="flex items-center gap-1 text-slate-600"><i class="fas fa-phone"></i> ${data.personal.phone}</span>` : ''}
+                                ${data.personal.email ? `<span class="flex items-center gap-1 text-slate-600"><i class="fas fa-envelope"></i> ${data.personal.email}</span>` : ''}
+                                ${data.personal.linkedin ? `<a href="${data.personal.linkedin}" class="flex items-center gap-1 text-slate-600 hover:text-slate-800"><i class="fab fa-linkedin"></i> LinkedIn</a>` : ''}
+                                ${data.personal.github ? `<a href="${data.personal.github}" class="flex items-center gap-1 text-slate-600 hover:text-slate-800"><i class="fab fa-github"></i> GitHub</a>` : ''}
+                            </div>
+                        </div>
+                        <div class="p-8">
+                            ${data.summary.text ? `
+                                <div class="mb-6">
+                                    <h2 class="section-title">Summary</h2>
+                                    <p>${data.summary.text.replace(/\n/g, '<br>')}</p>
+                                </div>` : ''}
+                            ${data.experience.length ? `
+                                <div class="mb-6">
+                                    <h2 class="section-title">Work Experience</h2>
+                                    ${data.experience.map(exp => `
+                                        <div class="mb-4">
+                                            <div class="flex justify-between items-start">
+                                                <h3 class="font-bold text-base">${exp.job_title}</h3>
+                                                <span class="text-gray-500 text-sm">${exp.start_date} - ${exp.end_date}</span>
+                                            </div>
+                                            <p class="font-medium text-sm text-gray-700">${exp.company}</p>
+                                            <ul class="list-disc list-outside ml-4 mt-1 space-y-1 text-sm">
+                                                ${exp.job_description.split('\n').map(item => item.trim() ? `<li>${item.trim()}</li>` : '').join('')}
+                                            </ul>
+                                        </div>`).join('')}
+                                </div>` : ''}
+                            ${data.education.length ? `
+                                <div class="mb-6">
+                                    <h2 class="section-title">Education</h2>
+                                    ${data.education.map(edu => `
+                                        <div class="flex justify-between items-start mb-2">
+                                            <div>
+                                                <h3 class="font-bold text-base">${edu.degree}</h3>
+                                                <p class="text-sm text-gray-700">${edu.school}</p>
+                                            </div>
+                                            <span class="text-gray-500 text-sm">${edu.edu_start} - ${edu.edu_end}</span>
+                                        </div>`).join('')}
+                                    </div>` : ''}
+                            ${data.skills.length ? `
+                                <div class="mb-6">
+                                    <h2 class="section-title">Skills</h2>
+                                    <p class="text-sm">${data.skills.join(', ')}</p>
+                                </div>` : ''}
+                            ${data.projects.length ? `
+                                <div class="mb-6">
+                                    <h2 class="section-title">Projects</h2>
+                                    ${data.projects.map(proj => `
+                                        <div class="mb-4">
+                                            <div class="flex justify-between items-start">
+                                                <h3 class="font-bold text-base">${proj.project_name}</h3>
+                                                ${proj.project_url ? `<a href="${proj.project_url}" class="text-sm text-blue-600 hover:underline">Link</a>` : ''}
+                                            </div>
+                                            <ul class="list-disc list-outside ml-4 mt-1 space-y-1 text-sm">
+                                                ${proj.project_description.split('\n').map(item => item.trim() ? `<li>${item.trim()}</li>` : '').join('')}
+                                            </ul>
+                                        </div>`).join('')}
+                                </div>` : ''}
+                            ${data.certifications.text ? `
+                                <div class="mb-6">
+                                    <h2 class="section-title">Certifications</h2>
+                                    <p class="text-sm">${data.certifications.text}</p>
+                                </div>` : ''}
+                        </div>
+                    </div>
+                `,
+                creative: (data) => `
+                    <div class="resume-preview-container text-black creative">
+                        <div class="flex items-center justify-center p-8 bg-slate-100">
+                            <div class="text-center">
+                                <h1 class="text-4xl font-black text-slate-800 tracking-wider">${data.personal.name || 'Full Name'}</h1>
+                                <p class="text-xl font-thin text-slate-600 mt-2">${data.personal.title || 'Professional Title'}</p>
+                                <div class="flex justify-center flex-wrap gap-x-4 gap-y-2 text-sm mt-4 text-slate-700">
+                                    ${data.personal.location ? `<span class="flex items-center gap-1"><i class="fas fa-map-marker-alt"></i> ${data.personal.location}</span>` : ''}
+                                    ${data.personal.phone ? `<span class="flex items-center gap-1"><i class="fas fa-phone"></i> ${data.personal.phone}</span>` : ''}
+                                    ${data.personal.email ? `<span class="flex items-center gap-1"><i class="fas fa-envelope"></i> ${data.personal.email}</span>` : ''}
+                                    ${data.personal.linkedin ? `<a href="${data.personal.linkedin}" class="flex items-center gap-1 hover:text-slate-900"><i class="fab fa-linkedin"></i> LinkedIn</a>` : ''}
+                                    ${data.personal.github ? `<a href="${data.personal.github}" class="flex items-center gap-1 hover:text-slate-900"><i class="fab fa-github"></i> GitHub</a>` : ''}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="p-8">
+                            ${data.summary.text ? `
+                                <div class="mb-6">
+                                    <h2 class="section-title">Professional Summary</h2>
+                                    <p class="text-sm">${data.summary.text.replace(/\n/g, '<br>')}</p>
+                                </div>` : ''}
+                            ${data.experience.length ? `
+                                <div class="mb-6">
+                                    <h2 class="section-title">Work Experience</h2>
+                                    ${data.experience.map(exp => `
+                                        <div class="mb-4 relative pl-8">
+                                            <div class="absolute left-0 top-1 h-full w-px bg-gray-300"></div>
+                                            <div class="absolute left-[-4px] top-1 w-2 h-2 bg-slate-500 rounded-full"></div>
+                                            <div class="flex justify-between items-start mb-1">
+                                                <h3 class="font-bold text-base text-slate-800">${exp.job_title} at ${exp.company}</h3>
+                                                <span class="text-gray-500 text-xs font-semibold">${exp.start_date} - ${exp.end_date}</span>
+                                            </div>
+                                            <ul class="list-none space-y-1 text-sm">
+                                                ${exp.job_description.split('\n').map(item => item.trim() ? `<li><span class="text-gray-400">&mdash;</span> ${item.trim()}</li>` : '').join('')}
+                                            </ul>
+                                        </div>`).join('')}
+                                </div>` : ''}
+                            ${data.projects.length ? `
+                                <div class="mb-6">
+                                    <h2 class="section-title">Projects</h2>
+                                    ${data.projects.map(proj => `
+                                       <div class="mb-4 relative pl-8">
+                                            <div class="absolute left-0 top-1 h-full w-px bg-gray-300"></div>
+                                            <div class="absolute left-[-4px] top-1 w-2 h-2 bg-slate-500 rounded-full"></div>
+                                            <div class="flex justify-between items-start mb-1">
+                                                <h3 class="font-bold text-base text-slate-800">${proj.project_name}</h3>
+                                                ${proj.project_url ? `<a href="${proj.project_url}" class="text-sm text-blue-600 hover:underline">Link</a>` : ''}
+                                            </div>
+                                            <ul class="list-none space-y-1 text-sm">
+                                                ${proj.project_description.split('\n').map(item => item.trim() ? `<li><span class="text-gray-400">&mdash;</span> ${item.trim()}</li>` : '').join('')}
+                                            </ul>
+                                        </div>`).join('')}
+                                </div>` : ''}
+                            ${data.education.length ? `
+                                <div class="mb-6">
+                                    <h2 class="section-title">Education</h2>
+                                    ${data.education.map(edu => `
+                                        <div class="flex justify-between items-start mb-2">
+                                            <div>
+                                                <h3 class="font-bold text-base">${edu.degree}</h3>
+                                                <p class="text-sm text-gray-700">${edu.school}</p>
+                                            </div>
+                                            <span class="text-gray-500 text-sm">${edu.edu_start} - ${edu.edu_end}</span>
+                                        </div>`).join('')}
+                                </div>` : ''}
+                            ${data.skills.length ? `
+                                <div class="mb-6">
+                                    <h2 class="section-title">Skills</h2>
+                                    <p class="text-sm">${data.skills.join(', ')}</p>
+                                </div>` : ''}
+                            ${data.certifications.text ? `
+                                <div class="mb-6">
+                                    <h2 class="section-title">Certifications</h2>
+                                    <p class="text-sm">${data.certifications.text}</p>
+                                </div>` : ''}
+                        </div>
+                    </div>
+                `
+            };
+            let activeTemplate = 'classic';
+
+            let resumeData = {
+                personal: {},
+                summary: {},
+                experience: [],
+                education: [],
+                skills: [],
+                projects: [],
+                certifications: {}
+            };
+
+            sectionBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const sectionId = btn.getAttribute('data-section');
+                    sections.forEach(sec => sec.classList.add('hidden'));
+                    document.getElementById(sectionId + '-section').classList.remove('hidden');
+                    sectionBtns.forEach(b => b.classList.remove('active', 'bg-slate-700'));
+                    btn.classList.add('active', 'bg-slate-700');
+                });
+            });
+
+            templateBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    activeTemplate = btn.getAttribute('data-template');
+                    templateBtns.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    updatePreview();
+                });
+            });
+
+            const updateResumeData = () => {
+                const formData = new FormData(form);
+                const data = {
+                    personal: {},
+                    summary: {},
+                    experience: [],
+                    education: [],
+                    skills: [],
+                    projects: [],
+                    certifications: {}
+                };
+
+                data.personal = {
+                    name: formData.get('name') || '',
+                    title: formData.get('title') || '',
+                    email: formData.get('email') || '',
+                    phone: formData.get('phone') || '',
+                    location: formData.get('location') || '',
+                    linkedin: formData.get('linkedin') || '',
+                    github: formData.get('github') || ''
+                };
+                data.summary = { text: formData.get('summary') || '' };
+                data.certifications = { text: formData.get('certifications') || '' };
+
+                document.querySelectorAll('.work-experience-entry').forEach(entry => {
+                    const company = entry.querySelector('[name="company[]"]').value;
+                    const job_title = entry.querySelector('[name="job_title[]"]').value;
+                    if (company || job_title) {
+                        data.experience.push({
+                            company,
+                            job_title,
+                            start_date: entry.querySelector('[name="start_date[]"]').value,
+                            end_date: entry.querySelector('[name="end_date[]"]').value,
+                            job_description: entry.querySelector('[name="job_description[]"]').value
+                        });
+                    }
+                });
+                document.querySelectorAll('.education-entry').forEach(entry => {
+                    const school = entry.querySelector('[name="school[]"]').value;
+                    const degree = entry.querySelector('[name="degree[]"]').value;
+                    if (school || degree) {
+                        data.education.push({
+                            school,
+                            degree,
+                            edu_start: entry.querySelector('[name="edu_start[]"]').value,
+                            edu_end: entry.querySelector('[name="edu_end[]"]').value
+                        });
+                    }
+                });
+                document.querySelectorAll('.project-entry').forEach(entry => {
+                    const project_name = entry.querySelector('[name="project_name[]"]').value;
+                    if (project_name) {
+                        data.projects.push({
+                            project_name,
+                            project_url: entry.querySelector('[name="project_url[]"]').value,
+                            project_description: entry.querySelector('[name="project_description[]"]').value
+                        });
+                    }
+                });
+
+                const skillsInput = formData.get('skills') || '';
+                data.skills = skillsInput.split(',').map(s => s.trim()).filter(s => s);
+
+                resumeData = data;
+                updatePreview();
+            };
+
+            const updatePreview = () => {
+                if (templateFunctions[activeTemplate]) {
+                    previewContainer.innerHTML = templateFunctions[activeTemplate](resumeData);
+                }
+            };
+
+            document.getElementById('add-experience').addEventListener('click', () => {
+                const container = document.getElementById('work-experience-container');
+                const newEntry = document.createElement('div');
+                newEntry.className = 'work-experience-entry border-b border-slate-700 pb-4 last:border-b-0';
+                newEntry.innerHTML = `
+                    <input type="text" name="company[]" placeholder="Company Name" class="w-full p-2 mb-2 rounded-lg bg-slate-800 border border-slate-700">
+                    <input type="text" name="job_title[]" placeholder="Job Title" class="w-full p-2 mb-2 rounded-lg bg-slate-800 border border-slate-700">
+                    <div class="flex gap-2 mb-2">
+                        <input type="text" name="start_date[]" placeholder="Start Date" class="w-1/2 p-2 rounded-lg bg-slate-800 border border-slate-700">
+                        <input type="text" name="end_date[]" placeholder="End Date" class="w-1/2 p-2 rounded-lg bg-slate-800 border border-slate-700">
+                    </div>
+                    <textarea name="job_description[]" rows="4" placeholder="Job Description (use bullet points)" class="w-full p-2 rounded-lg bg-slate-800 border border-slate-700"></textarea>
+                    <button type="button" class="ai-button mt-2 w-full bg-sky-600 hover:bg-sky-700 text-white font-bold py-2 rounded-xl transition-colors duration-200 text-sm" data-ai-action="experience">
+                        <i class="fas fa-magic mr-2"></i> Enhance with AI
+                    </button>
+                `;
+                container.appendChild(newEntry);
+                addInputListeners();
+            });
+
+            document.getElementById('add-education').addEventListener('click', () => {
+                const container = document.getElementById('education-container');
+                const newEntry = document.createElement('div');
+                newEntry.className = 'education-entry border-b border-slate-700 pb-4 last:border-b-0';
+                newEntry.innerHTML = `
+                    <input type="text" name="school[]" placeholder="University/School" class="w-full p-2 mb-2 rounded-lg bg-slate-800 border border-slate-700">
+                    <input type="text" name="degree[]" placeholder="Degree/Major" class="w-full p-2 mb-2 rounded-lg bg-slate-800 border border-slate-700">
+                    <div class="flex gap-2 mb-2">
+                        <input type="text" name="edu_start[]" placeholder="Start Year" class="w-1/2 p-2 rounded-lg bg-slate-800 border border-slate-700">
+                        <input type="text" name="edu_end[]" placeholder="End Year" class="w-1/2 p-2 rounded-lg bg-slate-800 border border-slate-700">
+                    </div>
+                `;
+                container.appendChild(newEntry);
+                addInputListeners();
+            });
+
+            document.getElementById('add-project').addEventListener('click', () => {
+                const container = document.getElementById('projects-container');
+                const newEntry = document.createElement('div');
+                newEntry.className = 'project-entry border-b border-slate-700 pb-4 last:border-b-0';
+                newEntry.innerHTML = `
+                    <input type="text" name="project_name[]" placeholder="Project Name" class="w-full p-2 mb-2 rounded-lg bg-slate-800 border border-slate-700">
+                    <input type="url" name="project_url[]" placeholder="Project URL" class="w-full p-2 mb-2 rounded-lg bg-slate-800 border border-slate-700">
+                    <textarea name="project_description[]" rows="4" placeholder="Project Description (use bullet points)" class="w-full p-2 rounded-lg bg-slate-800 border border-slate-700"></textarea>
+                    <button type="button" class="ai-button mt-2 w-full bg-sky-600 hover:bg-sky-700 text-white font-bold py-2 rounded-xl transition-colors duration-200 text-sm" data-ai-action="project">
+                        <i class="fas fa-magic mr-2"></i> Enhance with AI
+                    </button>
+                `;
+                container.appendChild(newEntry);
+                addInputListeners();
+            });
+
+            const addInputListeners = () => {
+                form.querySelectorAll('input, textarea').forEach(input => {
+                    input.removeEventListener('input', updateResumeData); // Prevent duplicates
+                    input.addEventListener('input', updateResumeData);
+                });
+                 // Re-bind AI button listeners for dynamically added elements
+                document.querySelectorAll('.ai-button').forEach(btn => {
+                    btn.removeEventListener('click', handleAiButtonClick); // Prevent multiple listeners
+                    btn.addEventListener('click', handleAiButtonClick);
+                });
+            };
+
+            const showAiMessage = (message, isError = false) => {
+                aiMessageBox.innerHTML = `<i class="fas ${isError ? 'fa-exclamation-circle text-red-400' : 'fa-magic text-fuchsia-300 animate-pulse'}"></i><span>${message}</span>`;
+                aiMessageBox.classList.add('show');
+            };
+
+            const hideAiMessage = () => {
+                aiMessageBox.classList.remove('show');
+            };
+
+            // --- AI Functions Start ---
+
+            // Function to generate plain text content
+            const generateTextContent = async (prompt) => {
+                if (!apiKey) {
+                    console.error("API key is not set.");
+                    showAiMessage('Error: API key is not configured.', true);
+                    return null;
+                }
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+                const payload = { contents: [{ parts: [{ text: prompt }] }] };
+
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    if (!response.ok) {
+                        console.error('Gemini API Error:', await response.text());
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    const result = await response.json();
+                    return result.candidates?.[0]?.content?.parts?.[0]?.text || null;
+                } catch (error) {
+                    console.error('Error calling Gemini API for text:', error);
+                    return null;
+                }
+            };
+
+            // Function to generate structured JSON content
+            const generateJsonContent = async (prompt, generationConfig) => {
+                 if (!apiKey) {
+                    console.error("API key is not set.");
+                    showAiMessage('Error: API key is not configured.', true);
+                    return null;
+                }
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+                const payload = {
+                    contents: [{ parts: [{ text: prompt }] }],
+                    generationConfig: generationConfig
+                };
+
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                     if (!response.ok) {
+                        console.error('Gemini API Error:', await response.text());
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    const result = await response.json();
+                    return result.candidates?.[0]?.content?.parts?.[0]?.text || null;
+                } catch (error) {
+                    console.error('Error calling Gemini API for JSON:', error);
+                    return null;
+                }
+            };
+
+            const getAiPrompt = (action, input) => {
+                switch (action) {
+                    case 'summary':
+                        return `Generate a professional summary for a resume based on the following information: ${input.name || ''}, ${input.title || ''}, and their skills: ${input.skills.join(', ')}. The summary should be concise, professional, and impactful.`;
+                    case 'experience':
+                        return `Enhance the following job description for a resume, making it more professional and achievement-oriented. Use strong action verbs and quantify results where possible. Format as a bulleted list.\nJob Title: ${input.job_title}\nCompany: ${input.company}\nOriginal Description: ${input.job_description}`;
+                    case 'skills':
+                        return `Suggest a list of relevant skills for a resume for a person with the professional title "${input.title || ''}" and with the following current skills: ${input.skills.join(', ')}. Provide a comma-separated list of skills only, without any other text.`;
+                    case 'project':
+                        return `Enhance the following project description for a resume, making it professional and impactful. Use strong action verbs and quantify results. Format as a bulleted list.\nProject Name: ${input.project_name}\nOriginal Description: ${input.project_description}`;
+                    case 'ats-checker':
+                        const fullResumeText = `Resume for ${input.name}. Professional Title: ${input.title}. Summary: ${input.summary}. Work Experience: ${input.experience}. Education: ${input.education}. Skills: ${input.skills}. Projects: ${input.projects}. Certifications: ${input.certifications}.`;
+                        let atsPrompt = `Analyze the following resume text from an Applicant Tracking System (ATS) perspective. Provide a professional analysis in a structured JSON format. The analysis should include a "score" (a number from 0 to 100), a list of "keywords_found" (important terms from the resume), and a list of "suggestions" (actionable advice to improve ATS compatibility).`;
+
+                        if (input.companyRef) {
+                            atsPrompt = `Analyze the following resume text from an Applicant Tracking System (ATS) perspective, specifically tailoring the analysis for a job application at a company like **${input.companyRef}**. Provide a professional analysis in a structured JSON format. The analysis should include a "score" (a number from 0 to 100 on its suitability for ${input.companyRef}), a list of "keywords_found" (important terms from the resume), a list of "keywords_missing" (keywords relevant for ${input.companyRef} that are not on the resume), and a list of "suggestions" (actionable advice to improve ATS compatibility for ${input.companyRef}).`;
+                        }
+                        atsPrompt += " The response must be a valid JSON object. IMPORTANT: Your entire response must be ONLY the raw JSON object, without any surrounding text, explanations, or markdown formatting like ```json."
+                        return `${atsPrompt}\nResume: ${fullResumeText}`;
+                }
+            };
+
+            const handleAiButtonClick = async (event) => {
+                const btn = event.currentTarget;
+                const action = btn.getAttribute('data-ai-action');
+                let prompt;
+                let targetField;
+
+                switch (action) {
+                    case 'summary':
+                        prompt = getAiPrompt('summary', { name: resumeData.personal.name, title: resumeData.personal.title, skills: resumeData.skills });
+                        targetField = form.querySelector('[name="summary"]');
+                        break;
+                    case 'experience':
+                        const entry = btn.closest('.work-experience-entry');
+                        prompt = getAiPrompt('experience', {
+                            job_title: entry.querySelector('[name="job_title[]"]').value,
+                            company: entry.querySelector('[name="company[]"]').value,
+                            job_description: entry.querySelector('[name="job_description[]"]').value
+                        });
+                        targetField = entry.querySelector('[name="job_description[]"]');
+                        break;
+                    case 'skills':
+                         prompt = getAiPrompt('skills', { title: resumeData.personal.title, skills: resumeData.skills });
+                        targetField = form.querySelector('[name="skills"]');
+                        break;
+                    case 'project':
+                        const projectEntry = btn.closest('.project-entry');
+                        prompt = getAiPrompt('project', {
+                            project_name: projectEntry.querySelector('[name="project_name[]"]').value,
+                            project_description: projectEntry.querySelector('[name="project_description[]"]').value
+                        });
+                        targetField = projectEntry.querySelector('[name="project_description[]"]');
+                        break;
+                }
+
+                if (prompt && targetField) {
+                    showAiMessage('Generating with AI...');
+                    const generatedText = await generateTextContent(prompt);
+                    if (generatedText) {
+                        targetField.value = generatedText.replace(/^- /gm, '').replace(/^\* /gm, '');
+                        updateResumeData();
+                        hideAiMessage();
+                    } else {
+                        showAiMessage('Error generating content.', true);
+                        setTimeout(hideAiMessage, 3000);
+                    }
+                }
+            };
+
+            // ATS Checker functionality
+            runAtsBtn.addEventListener('click', async () => {
+                const reportDiv = document.getElementById('ats-report');
+                reportDiv.innerHTML = '<div class="text-center"><i class="fas fa-sync-alt fa-spin text-sky-400 text-xl"></i><p class="mt-2 text-sm text-gray-400">Analyzing resume...</p></div>';
+
+                const companyRef = document.getElementById('ats-company-ref').value;
+                const prompt = getAiPrompt('ats-checker', {
+                    ...resumeData.personal,
+                    summary: resumeData.summary.text,
+                    experience: resumeData.experience.map(exp => `${exp.job_title} at ${exp.company}: ${exp.job_description}`).join('\n'),
+                    education: resumeData.education.map(edu => `${edu.degree} from ${edu.school}`).join('\n'),
+                    skills: resumeData.skills.join(', '),
+                    projects: resumeData.projects.map(proj => `${proj.project_name}: ${proj.project_description}`).join('\n'),
+                    certifications: resumeData.certifications.text,
+                    companyRef: companyRef
+                });
+                
+                const generationConfig = {
+                    responseMimeType: "application/json",
+                    responseSchema: {
+                        type: "OBJECT",
+                        properties: {
+                            "score": { "type": "NUMBER" },
+                            "keywords_found": { "type": "ARRAY", "items": { "type": "STRING" } },
+                            "keywords_missing": { "type": "ARRAY", "items": { "type": "STRING" } },
+                            "suggestions": { "type": "ARRAY", "items": { "type": "STRING" } }
+                        }
+                    }
+                };
+
+                const result = await generateJsonContent(prompt, generationConfig);
+                if (result) {
+                    try {
+                        const jsonString = result.substring(result.indexOf('{'), result.lastIndexOf('}') + 1);
+                        const atsReport = JSON.parse(jsonString);
+
+                        // Render the report
+                        reportDiv.innerHTML = `
+                            <div class="space-y-4">
+                                <div class="flex items-center gap-4">
+                                    <div class="relative w-16 h-16">
+                                        <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                                            <circle class="text-gray-700 stroke-current" stroke-width="8" cx="50" cy="50" r="40" fill="transparent"></circle>
+                                            <circle class="text-sky-400 stroke-current" stroke-width="8" stroke-linecap="round" cx="50" cy="50" r="40" fill="transparent"
+                                                style="stroke-dasharray: 251.2; stroke-dashoffset: ${251.2 - (atsReport.score / 100) * 251.2}; transition: stroke-dashoffset 0.5s ease-in-out;"></circle>
+                                        </svg>
+                                        <div class="absolute inset-0 flex items-center justify-center text-white text-lg font-bold">${atsReport.score}</div>
+                                    </div>
+                                    <div>
+                                        <h3 class="text-xl font-bold">ATS Score: ${atsReport.score}/100</h3>
+                                        <p class="text-sm text-gray-400">${atsReport.score >= 80 ? 'Excellent! Highly compatible.' : 'Good, with room for improvement.'}</p>
+                                    </div>
+                                </div>
+                                <div>
+                                    <h4 class="font-semibold mb-2">Keywords Found:</h4>
+                                    <div class="flex flex-wrap gap-2">${atsReport.keywords_found.map(keyword => `<span class="bg-blue-600 text-white text-xs font-semibold px-2.5 py-1 rounded-full">${keyword}</span>`).join('')}</div>
+                                </div>
+                                ${atsReport.keywords_missing && atsReport.keywords_missing.length > 0 ?
+                                `<div>
+                                    <h4 class="font-semibold mb-2 mt-4">Keywords Missing for ${companyRef || 'Target Role'}:</h4>
+                                    <div class="flex flex-wrap gap-2">${atsReport.keywords_missing.map(keyword => `<span class="bg-yellow-600 text-white text-xs font-semibold px-2.5 py-1 rounded-full">${keyword}</span>`).join('')}</div>
+                                </div>` : ''}
+                                <div>
+                                    <h4 class="font-semibold mb-2 mt-4">Suggestions for Improvement:</h4>
+                                    <ul class="list-disc list-inside space-y-1 text-sm">${atsReport.suggestions.map(suggestion => `<li>${suggestion}</li>`).join('')}</ul>
+                                </div>
+                            </div>
+                        `;
+                    } catch (e) {
+                        console.error('Failed to parse JSON:', e, "Raw response:", result);
+                        reportDiv.innerHTML = '<p class="text-red-400">Failed to generate a report. The AI response was not valid. Please try again.</p>';
+                    }
+                } else {
+                    reportDiv.innerHTML = '<p class="text-red-400">Failed to generate a report. Please try again.</p>';
+                }
+            });
+            // --- AI Functions End ---
+
+
+            // PDF download and Supabase upload functionality
+            downloadPdfBtn.addEventListener('click', async () => {
+                const element = document.getElementById('resume-preview');
+                const resumeName = (resumeData.personal.name || 'resume').trim().replace(/\s+/g, '_');
+                const localFileName = `${resumeName}.pdf`;
+                const remoteFileName = `resume/${resumeName}_${Date.now()}.pdf`;
+
+                const opt = {
+                    margin: 0,
+                    filename: localFileName,
+                    image: { type: 'jpeg', quality: 0.98 },
+                    html2canvas: { scale: 4, useCORS: true, logging: false },
+                    jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+                };
+                
+                showAiMessage('Generating PDF...');
+
+                // 1. Generate PDF as a blob
+                const pdfBlob = await html2pdf().from(element).set(opt).outputPdf('blob');
+
+                // 2. Upload and save to Supabase (if configured)
+                if (supabaseClient) {
+                    showAiMessage('Uploading PDF to cloud...');
+                    try {
+                        const { data: storageData, error: storageError } = await supabaseClient.storage
+                            .from('wike') // Your bucket name
+                            .upload(remoteFileName, pdfBlob, {
+                                cacheControl: '3600',
+                                upsert: false,
+                                contentType: 'application/pdf'
+                            });
+
+                        if (storageError) throw storageError;
+                        
+                        showAiMessage('✅ PDF uploaded! Saving data to database...');
+
+                        // 3. Save resume data to Supabase table
+                        const resumeRecord = {
+                            name: resumeData.personal.name,
+                            title: resumeData.personal.title,
+                            email: resumeData.personal.email,
+                            phone: resumeData.personal.phone,
+                            location: resumeData.personal.location,
+                            linkedin: resumeData.personal.linkedin,
+                            github: resumeData.personal.github,
+                            summary: resumeData.summary.text,
+                            experience: resumeData.experience,
+                            education: resumeData.education,
+                            skills: resumeData.skills,
+                            projects: resumeData.projects,
+                            certifications: resumeData.certifications.text,
+                            pdf_storage_path: remoteFileName // Link to the PDF in storage
+                        };
+
+                        const { data: dbData, error: dbError } = await supabaseClient
+                            .from('resumes')
+                            .insert([resumeRecord]);
+
+                        if (dbError) throw dbError;
+
+                        showAiMessage('✅ All data saved successfully!');
+
+                    } catch (error) {
+                        console.error('Supabase error:', error.message);
+                        showAiMessage(`❌ Cloud save failed: ${error.message}`, true);
+                    }
+                } else {
+                    showAiMessage('Supabase not configured. Skipping cloud save.', true);
+                }
+
+                // 4. Trigger local download
+                try {
+                    const url = URL.createObjectURL(pdfBlob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = opt.filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                } catch(e) {
+                     console.error("Local download failed:", e.message);
+                }
+
+                setTimeout(hideAiMessage, 3000);
+            });
+
+            printBtn.addEventListener('click', () => {
+                window.print();
+            });
+
+            addInputListeners();
+            updatePreview();
+        });
+    </script>
+</body>
+</html>
+

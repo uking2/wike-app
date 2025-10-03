@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UML & Diagram Editor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            --background-light: #f8fafc;
+            /* slate-50 */
+            --background-dark: #0f172a;
+            /* slate-900 */
+            --text-light: #0f172a;
+            --text-dark: #f8fafc;
+            --sidebar-bg-light: #ffffff;
+            --sidebar-bg-dark: #1e293b;
+            /* slate-800 */
+            --canvas-bg-light: #f1f5f9;
+            /* slate-100 */
+            --canvas-bg-dark: #334155;
+            /* slate-700 */
+            --border-light: #e2e8f0;
+            /* slate-200 */
+            --border-dark: #334155;
+            --accent-color: #3b82f6;
+            /* blue-500 */
+            --hover-bg-light: #f1f5f9;
+            --hover-bg-dark: #334155;
+        }
+
+        html.dark {
+            color-scheme: dark;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--background-light);
+            color: var(--text-light);
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        html.dark body {
+            background-color: var(--background-dark);
+            color: var(--text-dark);
+        }
+
+        .sidebar {
+            background-color: var(--sidebar-bg-light);
+            border-color: var(--border-light);
+        }
+
+        html.dark .sidebar {
+            background-color: var(--sidebar-bg-dark);
+            border-color: var(--border-dark);
+        }
+
+        .canvas-container-wrapper {
+            background-color: var(--canvas-bg-light);
+        }
+
+        html.dark .canvas-container-wrapper {
+            background-color: var(--canvas-bg-dark);
+        }
+
+        .toolbar {
+            background-color: var(--sidebar-bg-light);
+            border-color: var(--border-light);
+        }
+
+        html.dark .toolbar {
+            background-color: var(--sidebar-bg-dark);
+            border-color: var(--border-dark);
+        }
+
+        .shape:hover {
+            background-color: var(--hover-bg-light);
+        }
+
+        html.dark .shape:hover {
+            background-color: var(--hover-bg-dark);
+        }
+
+        .tooltip {
+            visibility: hidden;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .has-tooltip:hover .tooltip {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        #context-menu {
+            display: none;
+            position: absolute;
+            z-index: 1000;
+        }
+
+        .fabric-canvas-wrapper {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+
+        .canvas-container {
+            position: absolute !important;
+        }
+
+        .grid-background {
+            background-image:
+                linear-gradient(rgba(156, 163, 175, 0.4) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(156, 163, 175, 0.4) 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+
+        html.dark .grid-background {
+            background-image:
+                linear-gradient(rgba(100, 115, 135, 0.4) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(100, 115, 135, 0.4) 1px, transparent 1px);
+        }
+
+        /* Notification Style */
+        #notification {
+            transform: translateX(calc(100% + 1.25rem));
+        }
+
+        #notification.show {
+            transform: translateX(0);
+        }
+
+        /* Data table styling */
+        #data-editor-panel table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        #data-editor-panel th,
+        #data-editor-panel td {
+            padding: 8px 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        html.dark #data-editor-panel th,
+        html.dark #data-editor-panel td {
+            border-bottom: 1px solid var(--border-dark);
+        }
+
+        #data-editor-panel th {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            color: #64748b;
+            /* slate-500 */
+        }
+
+        html.dark #data-editor-panel th {
+            color: #94a3b8;
+            /* slate-400 */
+        }
+
+        #data-editor-panel td {
+            font-size: 0.875rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100px;
+        }
+
+        #data-editor-panel a {
+            color: var(--accent-color);
+            text-decoration: none;
+        }
+
+        #data-editor-panel a:hover {
+            text-decoration: underline;
+        }
+    </style>
+    <link rel="preconnect" href="https://rsms.me/">
+    <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
+</head>
+
+<body class="overflow-hidden">
+    <div id="app" class="h-screen w-screen flex flex-col">
+        <!-- Toolbar -->
+        <header class="toolbar border-b shadow-sm p-1 flex items-center justify-between z-20 flex-shrink-0">
+            <div class="flex items-center gap-2">
+                <div class="p-2 font-bold text-lg flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                        class="text-blue-500">
+                        <path
+                            d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z">
+                        </path>
+                        <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                        <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                    </svg>
+                    <span>Diagram Pro</span>
+                </div>
+                <div class="h-6 w-px bg-slate-200 dark:bg-slate-700"></div>
+                <button id="home-btn" class="toolbar-btn has-tooltip"
+                    onclick="window.location.href='../../home/home.html'">
+                    <i data-lucide="home"></i>
+                    <span class="tooltip">Home</span>
+                </button>
+                <button id="new-diagram" class="toolbar-btn has-tooltip"><i data-lucide="file-plus-2"></i><span
+                        class="tooltip">New</span></button>
+                <button id="export-png" class="toolbar-btn has-tooltip"><i data-lucide="image-down"></i><span
+                        class="tooltip">Export PNG</span></button>
+                <button id="export-pdf" class="toolbar-btn has-tooltip"><i data-lucide="file-text"></i><span
+                        class="tooltip">Export PDF</span></button>
+                <button id="save-cloud-btn" class="toolbar-btn has-tooltip"><i data-lucide="cloud-upload"></i><span
+                        class="tooltip">Save to Cloud</span></button>
+                <div class="h-6 w-px bg-slate-200 dark:bg-slate-700"></div>
+                <button id="undo" class="toolbar-btn has-tooltip"><i data-lucide="undo-2"></i><span
+                        class="tooltip">Undo</span></button>
+                <button id="redo" class="toolbar-btn has-tooltip"><i data-lucide="redo-2"></i><span
+                        class="tooltip">Redo</span></button>
+            </div>
+            <div class="flex items-center gap-2">
+                <button id="zoom-out" class="toolbar-btn has-tooltip"><i data-lucide="zoom-out"></i><span
+                        class="tooltip">Zoom Out</span></button>
+                <span id="zoom-level" class="text-sm w-12 text-center">100%</span>
+                <button id="zoom-in" class="toolbar-btn has-tooltip"><i data-lucide="zoom-in"></i><span
+                        class="tooltip">Zoom In</span></button>
+                <button id="fit-to-screen" class="toolbar-btn has-tooltip"><i data-lucide="maximize"></i><span
+                        class="tooltip">Fit to Screen</span></button>
+                <div class="h-6 w-px bg-slate-200 dark:bg-slate-700"></div>
+                <button id="toggle-data-editor" class="toolbar-btn has-tooltip">
+                    <i data-lucide="database"></i>
+                    <span class="tooltip">Toggle Data Editor</span>
+                </button>
+                <button id="theme-toggle" class="toolbar-btn has-tooltip">
+                    <i data-lucide="sun" class="light-icon"></i>
+                    <i data-lucide="moon" class="dark-icon hidden"></i>
+                    <span class="tooltip">Toggle Theme</span>
+                </button>
+            </div>
+        </header>
+
+        <main class="flex flex-1 overflow-hidden">
+            <!-- Sidebar -->
+            <aside class="sidebar w-60 border-r flex-shrink-0 overflow-y-auto">
+                <div id="shape-library">
+                    <!-- Shape categories will be injected here -->
+                </div>
+            </aside>
+
+            <!-- Main Canvas Area -->
+            <section id="canvas-wrapper" class="flex-1 flex flex-col relative">
+                <div class="canvas-container-wrapper flex-1 relative grid-background overflow-hidden">
+                    <canvas id="main-canvas"></canvas>
+                </div>
+            </section>
+
+            <!-- Properties Panel -->
+            <aside id="properties-panel" class="sidebar w-60 border-l flex-shrink-0 overflow-y-auto hidden">
+                <div id="text-properties" class="p-4 hidden">
+                    <h3 class="text-sm font-bold uppercase text-slate-500 tracking-wider mb-4">Text Properties</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label for="font-family" class="text-xs text-slate-400">Font</label>
+                            <select id="font-family"
+                                class="w-full p-2 border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-700 text-slate-900 dark:text-white mt-1">
+                                <option>Arial</option>
+                                <option>Courier New</option>
+                                <option>Georgia</option>
+                                <option>Times New Roman</option>
+                                <option>Verdana</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="text-color" class="text-xs text-slate-400">Color</label>
+                            <input type="color" id="text-color"
+                                class="w-full h-8 p-1 border border-slate-300 dark:border-slate-600 rounded-md cursor-pointer bg-white dark:bg-slate-700">
+                        </div>
+                        <div>
+                            <label for="font-size" class="text-xs text-slate-400">Size</label>
+                            <input type="number" id="font-size" min="1" max="200"
+                                class="w-full p-2 border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-700 text-slate-900 dark:text-white">
+                        </div>
+                        <div>
+                            <label class="text-xs text-slate-400">Style</label>
+                            <div class="grid grid-cols-2 gap-2 mt-1">
+                                <button id="font-bold"
+                                    class="p-2 border dark:border-slate-700 rounded-md font-bold transition-colors">B</button>
+                                <button id="font-italic"
+                                    class="p-2 border dark:border-slate-700 rounded-md italic transition-colors">I</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Data Editor Panel -->
+            <aside id="data-editor-panel" class="sidebar w-80 border-l flex-shrink-0 flex flex-col hidden">
+                <div class="p-4 border-b dark:border-slate-700 flex justify-between items-center">
+                    <h3 class="text-sm font-bold uppercase text-slate-500 tracking-wider">Data Editor</h3>
+                    <button id="refresh-data-btn" class="p-1 rounded hover:bg-slate-200 dark:hover:bg-slate-700">
+                        <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                    </button>
+                </div>
+                <div class="flex-1 overflow-y-auto p-2">
+                    <table class="w-full text-left">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Name</th>
+                                <th>URL</th>
+                            </tr>
+                        </thead>
+                        <tbody id="diagrams-table-body">
+                            <!-- Data will be injected here -->
+                            <tr>
+                                <td colspan="3" class="text-center p-4 text-slate-500">No data loaded.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </aside>
+        </main>
+    </div>
+
+    <!-- Context Menu -->
+    <div id="context-menu" class="bg-white dark:bg-slate-800 border dark:border-slate-700 rounded-md shadow-lg text-sm">
+        <button data-action="bring-to-front" class="context-menu-item"><i data-lucide="arrow-up-to-line"></i>Bring to
+            Front</button>
+        <button data-action="bring-forward" class="context-menu-item"><i data-lucide="chevrons-up"></i>Bring
+            Forward</button>
+        <button data-action="send-backward" class="context-menu-item"><i data-lucide="chevrons-down"></i>Send
+            Backward</button>
+        <button data-action="send-to-back" class="context-menu-item"><i data-lucide="arrow-down-to-line"></i>Send to
+            Back</button>
+        <div class="my-1 h-px bg-slate-200 dark:bg-slate-700"></div>
+        <button data-action="flip-arrow" class="context-menu-item"><i data-lucide="repeat"></i>Flip Direction</button>
+        <button data-action="duplicate" class="context-menu-item"><i data-lucide="copy"></i>Duplicate</button>
+        <button data-action="delete" class="context-menu-item text-red-500"><i data-lucide="trash-2"></i>Delete</button>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div id="confirmation-modal"
+        class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white dark:bg-slate-800 rounded-lg shadow-xl p-6 w-full max-w-sm">
+            <h3 id="modal-title" class="text-lg font-medium leading-6 text-gray-900 dark:text-gray-100">Are you sure?
+            </h3>
+            <div class="mt-2">
+                <p id="modal-message" class="text-sm text-gray-500 dark:text-gray-400">Any unsaved changes will be lost.
+                </p>
+            </div>
+            <div class="mt-4 flex justify-end gap-3">
+                <button id="modal-cancel"
+                    class="px-4 py-2 bg-gray-200 dark:bg-slate-700 text-gray-800 dark:text-gray-200 rounded-md hover:bg-gray-300 dark:hover:bg-slate-600">Cancel</button>
+                <button id="modal-confirm"
+                    class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Diagram Name Modal -->
+    <div id="diagram-name-modal"
+        class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white dark:bg-slate-800 rounded-lg shadow-xl p-6 w-full max-w-sm">
+            <h3 class="text-lg font-medium leading-6 text-gray-900 dark:text-gray-100">Save to Cloud</h3>
+            <div class="mt-2">
+                <p class="text-sm text-gray-500 dark:text-gray-400 mb-2">Please enter a name for your diagram.</p>
+                <input type="text" id="diagram-name-input"
+                    class="w-full p-2 border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
+                    placeholder="e.g., System Architecture V1">
+            </div>
+            <div class="mt-4 flex justify-end gap-3">
+                <button id="modal-name-cancel"
+                    class="px-4 py-2 bg-gray-200 dark:bg-slate-700 text-gray-800 dark:text-gray-200 rounded-md hover:bg-gray-300 dark:hover:bg-slate-600">Cancel</button>
+                <button id="modal-name-save"
+                    class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Pop-up -->
+    <div id="notification"
+        class="fixed bottom-5 right-5 text-white px-4 py-2 rounded-md shadow-lg transition-transform duration-300 z-50">
+        <span id="notification-message"></span>
+    </div>
+
+    <!-- External Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="diagram.js"></script>
+</body>
+
+</html>

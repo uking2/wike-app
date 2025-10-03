@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Image Generator</title>
+    <!-- SUPABASE CDN: Added for database integration -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link rel="stylesheet" href="image.css">
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-left">
+                <h1>AI Image Generator</h1>
+            </div>
+            <div class="nav-buttons">
+                <a href="/home/home.html">Home</a>
+            </div>
+        </div>
+
+        <p class="subtitle">Create stunning images from text descriptions and save them directly to your cloud storage.
+        </p>
+
+        <!-- Generator Section -->
+        <div class="generator-section">
+            <div class="input-group">
+                <label for="prompt">Enter your image description</label>
+                <textarea id="prompt" class="prompt-input"
+                    placeholder="Describe the image you want to generate..."></textarea>
+            </div>
+
+            <div class="controls">
+                <div class="control-group">
+                    <label for="style">Art Style</label>
+                    <select id="style" class="control-input">
+                        <option value="realistic">Realistic</option>
+                        <option value="artistic">Artistic</option>
+                        <option value="cartoon">Cartoon</option>
+                        <option value="abstract">Abstract</option>
+                        <option value="cyberpunk">Cyberpunk</option>
+                        <option value="vintage">Vintage</option>
+                    </select>
+                </div>
+
+                <div class="control-group">
+                    <label for="resolution">Resolution</label>
+                    <select id="resolution" class="control-input">
+                        <option value="512x512">512 × 512</option>
+                        <option value="768x768">768 × 768</option>
+                        <option value="1024x1024">1024 × 1024</option>
+                        <option value="1536x1024">1536 × 1024</option>
+                    </select>
+                </div>
+
+                <div class="control-group">
+                    <label for="quality">Quality</label>
+                    <select id="quality" class="control-input">
+                        <option value="standard">Standard</option>
+                        <option value="high">High</option>
+                        <option value="ultra">Ultra</option>
+                    </select>
+                </div>
+
+                <div class="control-group">
+                    <label for="count">Number of Images</label>
+                    <select id="count" class="control-input">
+                        <option value="1">1 Image</option>
+                        <option value="2">2 Images</option>
+                        <option value="4">4 Images</option>
+                    </select>
+                </div>
+            </div>
+
+            <button id="generateBtn" class="generate-btn">
+                <span class="loading-spinner"></span>
+                <span class="btn-text">Generate Images</span>
+            </button>
+        </div>
+
+        <!-- Results Section -->
+        <div class="results-section">
+            <div class="results-header">
+                <h2>Generated Images</h2>
+            </div>
+            <div id="results">
+                <!-- Placeholder will be replaced by history or new images -->
+                <div class="placeholder">
+                    <svg class="placeholder-icon" viewBox="0 0 24 24" fill="currentColor">
+                        <path
+                            d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z" />
+                    </svg>
+                    <p>Your generated images will appear here</p>
+                    <p style="font-size: 0.8rem; margin-top: 0.5rem;">Enter a prompt above and click "Generate Images"
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const promptInput = document.getElementById('prompt');
+        const styleSelect = document.getElementById('style');
+        const resolutionSelect = document.getElementById('resolution');
+        const qualitySelect = document.getElementById('quality');
+        const countSelect = document.getElementById('count');
+        const generateBtn = document.getElementById('generateBtn');
+        const resultsDiv = document.getElementById('results');
+        const loadingSpinner = document.querySelector('.loading-spinner');
+        const btnText = document.querySelector('.btn-text');
+
+        let isGenerating = false;
+
+        // --- SUPABASE SETUP START ---
+        // ❗️ Replace with your Supabase URL and Anon Key
+        const SUPABASE_URL = 'https://hehfnsaoibkvwdolcfkg.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhlaGZuc2FvaWJrdndkb2xjZmtnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgxOTc5MDUsImV4cCI6MjA3Mzc3MzkwNX0.aDpemN2HIGpORC-tZiQp0iIqXv7L4tO8zXvDCjygvbs';
+
+        let supabase = null;
+        if (SUPABASE_URL && SUPABASE_ANON_KEY && SUPABASE_URL !== 'YOUR_SUPABASE_URL') {
+            supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        } else {
+            console.warn("Supabase credentials not set. Saving and history features are disabled.");
+        }
+        // --- SUPABASE SETUP END ---
+
+
+        generateBtn.addEventListener('click', generateAndUploadImages);
+
+        promptInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                generateAndUploadImages();
+            }
+        });
+
+        // --- Load history on page start ---
+        document.addEventListener('DOMContentLoaded', loadHistory);
+
+        async function generateAndUploadImages() {
+            const prompt = promptInput.value.trim();
+            if (!prompt) {
+                showStatusMessage('error', 'Please enter a description for your image.');
+                return;
+            }
+            // --- ADDED: Save the prompt to the new table immediately ---
+            savePrompt(prompt);
+            
+            if (isGenerating || !supabase) {
+                if(!supabase) showStatusMessage('error', 'Supabase is not configured.');
+                return;
+            };
+
+            isGenerating = true;
+            generateBtn.disabled = true;
+            loadingSpinner.style.display = 'inline-block';
+            btnText.textContent = 'Generating...';
+            resultsDiv.innerHTML = ''; // Clear previous results
+            
+            const imageCount = parseInt(countSelect.value);
+            const resolution = resolutionSelect.value;
+            const style = styleSelect.value;
+            const quality = qualitySelect.value;
+            
+            const imageGrid = document.createElement('div');
+            imageGrid.className = 'image-grid';
+            resultsDiv.appendChild(imageGrid);
+
+            const promises = [];
+            for (let i = 0; i < imageCount; i++) {
+                promises.push(processImage(prompt, resolution, style, quality, i, imageGrid));
+            }
+
+            await Promise.all(promises);
+
+            isGenerating = false;
+            generateBtn.disabled = false;
+            loadingSpinner.style.display = 'none';
+            btnText.textContent = 'Generate Images';
+            showStatusMessage('success', `Successfully generated and saved ${imageCount} image${imageCount > 1 ? 's' : ''}!`);
+        }
+        
+        // --- NEW: Processes a single image (generate, upload, display) ---
+        async function processImage(prompt, resolution, style, quality, index, gridContainer) {
+             try {
+                showStatusMessage('info', `Generating image ${index + 1}...`);
+                const enhancedPrompt = `${prompt}, ${style} style, high quality, detailed`;
+                const pollutionsUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(enhancedPrompt)}?width=${resolution.split('x')[0]}&height=${resolution.split('x')[1]}&seed=${Date.now() + index}&nologo=true`;
+
+                showStatusMessage('info', `Uploading image ${index + 1} to storage...`);
+                const supabaseUrl = await uploadImageToSupabase(pollutionsUrl, prompt);
+
+                if (supabaseUrl) {
+                    await saveGeneration({
+                        prompt: prompt,
+                        image_url: supabaseUrl,
+                        style: style,
+                        resolution: resolution,
+                        quality: quality
+                    });
+                    const imageCard = createImageCard(prompt, supabaseUrl, resolution, style, quality);
+                    gridContainer.appendChild(imageCard);
+                }
+            } catch (error) {
+                console.error('Failed to process image:', error);
+                showStatusMessage('error', `Failed to process image ${index + 1}.`);
+            }
+        }
+
+        // --- NEW: Uploads image from a URL to Supabase bucket ---
+        async function uploadImageToSupabase(imageUrl, prompt) {
+            try {
+                // Fetch the image from the external URL
+                const response = await fetch(imageUrl);
+                if (!response.ok) throw new Error('Failed to fetch image from source.');
+                const imageBlob = await response.blob();
+
+                // Create a unique file name
+                const fileName = `generated/${Date.now()}-${prompt.slice(0, 20).replace(/[^a-zA-Z0-9]/g, '-')}.jpg`;
+                
+                // Upload to Supabase Storage
+                const { data, error: uploadError } = await supabase.storage
+                    .from('wike') // Your bucket name
+                    .upload(fileName, imageBlob, {
+                        cacheControl: '3600',
+                        upsert: false,
+                    });
+
+                if (uploadError) throw uploadError;
+
+                // Get the public URL of the uploaded file
+                const { data: { publicUrl } } = supabase.storage
+                    .from('wike') // Your bucket name
+                    .getPublicUrl(data.path);
+                
+                return publicUrl;
+            } catch (error) {
+                console.error('Error uploading image to Supabase:', error.message);
+                showStatusMessage('error', 'Could not upload image to bucket.');
+                return null;
+            }
+        }
+
+
+        function createImageCard(prompt, imageUrl, resolution, style, quality) {
+            const imageCard = document.createElement('div');
+            imageCard.className = 'image-card';
+            imageCard.innerHTML = `
+                <div class="image-container" style="position: relative; overflow: hidden;">
+                    <img src="${imageUrl}"
+                         alt="Generated image: ${prompt}"
+                         style="width: 100%; height: 300px; object-fit: cover; border-radius: 8px 8px 0 0; transition: transform 0.3s ease, opacity 0.5s ease;"
+                         onload="this.style.opacity='1'"
+                         onerror="this.parentElement.innerHTML='<div class=\\'image-placeholder\\'>Failed to load image</div>'"
+                         loading="lazy">
+                    <div class="image-overlay" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); opacity: 0; transition: opacity 0.3s ease; display: flex; align-items: center; justify-content: center; color: white; font-size: 0.9rem; cursor: pointer;" onclick="openImageModal('${imageUrl}', '${prompt}')">
+                        Click to view full size
+                    </div>
+                </div>
+                <div class="image-info">
+                    <div class="image-prompt">"${prompt}"</div>
+                    <div class="image-details">
+                        <span>${resolution}</span>
+                        <span>${style} style</span>
+                        <span>${quality} quality</span>
+                    </div>
+                    <div style="margin-top: 1rem; display: flex; gap: 0.5rem;">
+                        <button onclick="downloadImage('${imageUrl}', '${prompt.substring(0, 30)}')"
+                                style="flex: 1; padding: 0.5rem; background: #4a9eff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">
+                            Download
+                        </button>
+                    </div>
+                </div>
+            `;
+            imageCard.addEventListener('mouseenter', () => imageCard.querySelector('.image-overlay').style.opacity = '1');
+            imageCard.addEventListener('mouseleave', () => imageCard.querySelector('.image-overlay').style.opacity = '0');
+            return imageCard;
+        }
+
+
+        function showStatusMessage(type, message) {
+            const container = document.querySelector('.results-section');
+            const existingMessage = container.querySelector('.status-message');
+            if (existingMessage) {
+                existingMessage.remove();
+            }
+
+            const statusDiv = document.createElement('div');
+            statusDiv.className = `status-message status-${type}`;
+            statusDiv.textContent = message;
+
+            container.insertBefore(statusDiv, container.firstChild.nextSibling);
+
+            if (type === 'success' || type === 'info') {
+                setTimeout(() => {
+                    if (statusDiv.parentNode) {
+                        statusDiv.remove();
+                    }
+                }, 5000);
+            }
+        }
+
+        const samplePrompts = [
+            "A majestic mountain landscape at golden hour with a crystal clear lake reflecting the peaks",
+            "A futuristic robot sitting in a cozy library reading a book",
+            "An ancient Japanese temple surrounded by cherry blossoms in full bloom", "A steampunk airship floating above a Victorian city at sunset",
+            "A magical forest with glowing mushrooms and ethereal light filtering through the trees"
+        ];
+
+        document.addEventListener('click', (e) => {
+            if (e.target.closest('.placeholder') && !promptInput.value.trim()) {
+                promptInput.value = samplePrompts[Math.floor(Math.random() * samplePrompts.length)];
+                promptInput.focus();
+            }
+        });
+
+        async function downloadImage(imageUrl, filename) {
+            try {
+                const response = await fetch(imageUrl);
+                if (!response.ok) throw new Error('Failed to fetch image for download');
+                const blob = await response.blob();
+                const blobUrl = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = blobUrl;
+                link.download = `ai-generated-${filename.replace(/[^a-z0-9]/gi, '-').toLowerCase()}.jpg`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(blobUrl);
+            } catch (err) {
+                console.error(err);
+                alert('Failed to download image.');
+            }
+        }
+
+        function openImageModal(imageUrl, prompt) {
+            const modal = document.createElement('div');
+            modal.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: flex; align-items: center; justify-content: center; z-index: 1000; cursor: pointer;`;
+            modal.innerHTML = `<div style="max-width: 90vw; max-height: 90vh; position: relative;"><img src="${imageUrl}" style="max-width: 100%; max-height: 90vh; object-fit: contain; border-radius: 8px;"><button onclick="this.parentElement.parentElement.remove()" style="position: absolute; top: -35px; right: -15px; background: #ff4444; color: white; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; font-size: 1.2rem; line-height: 30px;">×</button></div>`;
+            modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+            document.body.appendChild(modal);
+        }
+
+        // --- NEW FUNCTION: Saves the entered prompt to the 'prompts' table ---
+        async function savePrompt(promptText) {
+            if (!supabase) return;
+            try {
+                const { error } = await supabase.from('prompts').insert([{ prompt_text: promptText }]);
+                if (error) throw error;
+                console.log('Prompt saved successfully.');
+            } catch (error) {
+                console.error('Error saving prompt to Supabase:', error.message);
+                // We don't show an error to the user for this, as it's a background task.
+            }
+        }
+
+        async function saveGeneration(data) {
+            if (!supabase) return;
+            try {
+                const { error } = await supabase.from('generations').insert([data]);
+                if (error) throw error;
+            } catch (error) {
+                console.error('Error saving generation to Supabase:', error.message);
+            }
+        }
+
+        async function loadHistory() {
+            if (!supabase) return;
+            resultsDiv.innerHTML = '';
+            showStatusMessage('info', 'Loading previous creations...');
+
+            try {
+                const { data, error } = await supabase.from('generations').select('*').order('created_at', { ascending: false }).limit(8);
+                if (error) throw error;
+                const loadingMessage = document.querySelector('.status-message');
+                if (loadingMessage) loadingMessage.remove();
+
+                if (data && data.length > 0) {
+                    const imageGrid = document.createElement('div');
+                    imageGrid.className = 'image-grid';
+                    resultsDiv.appendChild(imageGrid);
+                    data.forEach(item => {
+                        const imageCard = createImageCard(item.prompt, item.image_url, item.resolution, item.style, item.quality);
+                        imageGrid.appendChild(imageCard);
+                    });
+                } else {
+                    resultsDiv.innerHTML = `<div class="placeholder"><svg class="placeholder-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z" /></svg><p>No history found. Generate some images to start!</p></div>`;
+                }
+            } catch (error) {
+                console.error('Error loading history from Supabase:', error.message);
+                showStatusMessage('error', 'Could not load image history.');
+            }
+        }
+    </script>
+</body>
+</html>
+
+

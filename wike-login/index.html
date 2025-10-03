@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Register & Login</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: "Poppins", sans-serif;
+    }
+
+    body {
+      background: linear-gradient(to right top, #051937, #004d7a, #008793, #00bf72, #a8eb12);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 20, 50, 0.75);
+      backdrop-filter: blur(6px);
+      z-index: 0;
+    }
+
+    .container {
+      background: rgba(0, 30, 60, 0.6);
+      backdrop-filter: blur(15px);
+      border: 1px solid rgba(0, 198, 255, 0.3);
+      width: 400px;
+      max-width: 90%;
+      padding: 2rem;
+      border-radius: 15px;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.7);
+      position: relative;
+      z-index: 1;
+      animation: fadeIn 1s ease-in-out;
+    }
+
+    .form-title {
+      font-size: 1.8rem;
+      font-weight: bold;
+      text-align: center;
+      color: #fff;
+      margin-bottom: 1rem;
+    }
+
+    .input-group {
+      position: relative;
+      margin: 1.2rem 0;
+    }
+
+    .input-group i {
+      position: absolute;
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #bbb;
+    }
+
+    input {
+      width: 100%;
+      padding: 12px 12px 12px 35px;
+      border: none;
+      border-bottom: 2px solid #444;
+      background: transparent;
+      color: #fff;
+      font-size: 16px;
+      transition: border-color 0.3s;
+    }
+
+    input:focus {
+      outline: none;
+      border-bottom: 2px solid #00c6ff;
+    }
+
+    label {
+      position: absolute;
+      left: 35px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #aaa;
+      transition: 0.3s;
+      pointer-events: none;
+    }
+
+    input:focus~label,
+    input:not(:placeholder-shown)~label {
+      top: -10px;
+      font-size: 12px;
+      color: #00c6ff;
+    }
+
+    button.btn {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 25px;
+      background: linear-gradient(45deg, #00c6ff, #0072ff);
+      color: #fff;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: 0.3s;
+      margin-top: 1rem;
+    }
+
+    button.btn:hover {
+      background: linear-gradient(45deg, #0072ff, #00c6ff);
+      transform: scale(1.05);
+    }
+
+    .recover {
+      text-align: right;
+      font-size: 0.9rem;
+      margin: 0.5rem 0 1.2rem;
+    }
+
+    .recover a {
+      color: #00c6ff;
+      text-decoration: none;
+    }
+
+    .recover a:hover {
+      text-decoration: underline;
+    }
+
+    .links {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+      margin-top: 1rem;
+      color: #ccc;
+    }
+
+    #signUpButton,
+    #signInButton {
+      background: none;
+      border: none;
+      color: #00c6ff;
+      font-weight: bold;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    #signUpButton:hover,
+    #signInButton:hover {
+      text-decoration: underline;
+    }
+
+    .messageDiv {
+      background: rgba(0, 198, 255, 0.2);
+      border-left: 4px solid #00c6ff;
+      color: #fff;
+      padding: 10px;
+      border-radius: 5px;
+      font-size: 0.9rem;
+      margin-bottom: 1rem;
+      opacity: 0;
+      transition: opacity 0.5s ease-in-out;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .google-box {
+      margin-top: 1rem;
+      text-align: center;
+    }
+
+    .google-btn {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 25px;
+      background: #202124;
+      color: #fff;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: 0.3s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .google-btn:hover {
+      background: #303134;
+      transform: scale(1.05);
+    }
+
+    .google-btn i {
+      color: #DB4437;
+      font-size: 18px;
+    }
+  </style>
+</head>
+<body>
+  <div class="overlay"></div>
+
+  <!-- SIGN UP FORM -->
+  <div class="container" id="signup" style="display:none;">
+    <h1 class="form-title">Register</h1>
+    <form id="signUpForm">
+      <div id="signUpMessage" class="messageDiv"></div>
+      <div class="input-group">
+        <i class="fas fa-user"></i>
+        <input type="text" id="fName" placeholder=" " required>
+        <label for="fName">First Name</label>
+      </div>
+      <div class="input-group">
+        <i class="fas fa-user"></i>
+        <input type="text" id="lName" placeholder=" " required>
+        <label for="lName">Last Name</label>
+      </div>
+      <div class="input-group">
+        <i class="fas fa-envelope"></i>
+        <input type="email" id="rEmail" placeholder=" " required>
+        <label for="rEmail">Email</label>
+      </div>
+      <div class="input-group">
+        <i class="fas fa-lock"></i>
+        <input type="password" id="rPassword" placeholder=" " required>
+        <label for="rPassword">Password</label>
+      </div>
+      <button type="submit" class="btn" id="submitSignUp">Sign Up</button>
+    </form>
+    <div class="links">
+      <p>Already have an account?</p>
+      <button id="signInButton">Sign In</button>
+    </div>
+  </div>
+
+  <!-- SIGN IN FORM -->
+  <div class="container" id="signIn">
+    <h1 class="form-title">Sign In</h1>
+    <form id="signInForm">
+      <div id="signInMessage" class="messageDiv"></div>
+      <div class="input-group">
+        <i class="fas fa-envelope"></i>
+        <input type="email" id="email" placeholder=" " required>
+        <label for="email">Email</label>
+      </div>
+      <div class="input-group">
+        <i class="fas fa-lock"></i>
+        <input type="password" id="password" placeholder=" " required>
+        <label for="password">Password</label>
+      </div>
+      
+      <button type="submit" class="btn" id="submitSignIn">Sign In</button>
+    </form>
+
+    <div class="google-box">
+      <p style="text-align:center; margin:1rem 0; color:#aaa;">OR</p>
+      <button class="google-btn" id="googleLogin">
+        <i class="fab fa-google"></i> Continue with Google
+      </button>
+    </div>
+
+    <div class="links">
+      <p>Don't have an account yet?</p>
+      <button id="signUpButton">Sign Up</button>
+    </div>
+  </div>
+
+  <script>
+    // --- SUPABASE CONFIG ---
+    const SUPABASE_URL = "https://hehfnsaoibkvwdolcfkg.supabase.co";
+    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhlaGZuc2FvaWJrdndkb2xjZmtnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgxOTc5MDUsImV4cCI6MjA3Mzc3MzkwNX0.aDpemN2HIGpORC-tZiQp0iIqXv7L4tO8zXvDCjygvbs";
+    const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    // --- DOM ELEMENTS ---
+    const signInForm = document.getElementById('signIn');
+    const signUpForm = document.getElementById('signup');
+    const signUpBtnLink = document.getElementById('signUpButton');
+    const signInBtnLink = document.getElementById('signInButton');
+    
+    // --- Show message utility ---
+    function showMessage(message, divId, isError = false) {
+      const messageDiv = document.getElementById(divId);
+      messageDiv.style.display = "block";
+      messageDiv.textContent = message;
+      messageDiv.style.color = isError ? '#ff8a8a' : '#fff';
+      messageDiv.style.borderLeftColor = isError ? '#ff8a8a' : '#00c6ff';
+      messageDiv.style.opacity = 1;
+      setTimeout(() => { messageDiv.style.opacity = 0; }, 5000);
+    }
+
+    // --- UI TOGGLE FUNCTIONS ---
+    function showSignUp() {
+      signInForm.style.display = "none";
+      signUpForm.style.display = "block";
+    }
+
+    function showSignIn() {
+      signUpForm.style.display = "none";
+      signInForm.style.display = "block";
+    }
+
+    // --- EVENT LISTENERS ---
+    signUpBtnLink.addEventListener('click', showSignUp);
+    signInBtnLink.addEventListener('click', showSignIn);
+
+    // --- AUTH LOGIC ---
+
+    // 1. SIGN UP
+    document.getElementById("signUpForm").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const firstName = document.getElementById("fName").value.trim();
+      const lastName = document.getElementById("lName").value.trim();
+      const email = document.getElementById("rEmail").value.trim();
+      const password = document.getElementById("rPassword").value;
+
+      if (!firstName || !lastName || !email || !password) {
+        showMessage("All fields are required", "signUpMessage", true);
+        return;
+      }
+
+      const { data, error } = await client.auth.signUp({ 
+        email, 
+        password,
+        options: {
+            data: {
+                first_name: firstName,
+                last_name: lastName
+            }
+        }
+      });
+      
+      if (error) {
+        showMessage(error.message, "signUpMessage", true);
+        return;
+      }
+
+      if (data.user && data.user.identities.length === 0) {
+        showMessage("This email is already in use. Please sign in.", "signUpMessage", true);
+      } else {
+        showMessage("Registration successful! Please check your email for a verification link.", "signUpMessage");
+        document.getElementById("signUpForm").reset();
+      }
+    });
+
+    // 2. SIGN IN
+    document.getElementById("signInForm").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value;
+
+      if (!email || !password) {
+        showMessage("Email and password are required", "signInMessage", true);
+        return;
+      }
+
+      const { data, error } = await client.auth.signInWithPassword({ email, password });
+
+      if (error) {
+        showMessage(error.message, "signInMessage", true);
+        return;
+      }
+      
+      
+      // *** FIX: Added redirect on successful email/password sign-in. ***
+    });
+
+    // 3. GOOGLE LOGIN
+    document.getElementById("googleLogin").addEventListener("click", async () => {
+      const { error } = await client.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: window.location.origin + '/home/home.html',
+          queryParams: { prompt: "select_account" }
+        }
+      });
+      if (error) console.error("Google Login Error:", error);
+    });
+      
+    // --- SESSION CHECK ON PAGE LOAD ---
+    document.addEventListener('DOMContentLoaded', () => {
+        // Always show the sign-in form when the page is loaded.
+        // Redirection will now only happen after the user actively signs in.
+        showSignIn();
+
+        // This listener handles the redirect back from OAuth providers like Google.
+        client.auth.onAuthStateChange((event, session) => {
+            if (event === 'SIGNED_IN' && session) {
+            if (event === 'SIGNED_IN' && session) {
+                window.location.href = '/home/home.html';
+            }
+            }
+        });
+    });
+  
+  </script>
+</body>
+</html>
+

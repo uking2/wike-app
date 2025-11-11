@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced ATS-Friendly Resume Checker</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Load PDF.js for PDF reading -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.6.347/pdf.min.js"></script>
+    <script>
+        // Required for pdf.js to work from a CDN
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.6.347/pdf.worker.min.js';
+    </script>
+
+    <!-- Load Mammoth.js for DOCX reading -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.18/mammoth.browser.min.js"></script>
+
+    <!-- Use Inter font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Simple scrollbar styling for dark theme */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #374151; /* gray-700 */
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #6b7280; /* gray-500 */
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #9ca3af; /* gray-400 */
+        }
+        /* Styles for active tab */
+        .tab-button[aria-selected="true"] {
+            background-color: #2563eb; /* bg-blue-600 */
+            color: #ffffff; /* text-white */
+        }
+    </style>
+</head>
+<body class="bg-gray-900 min-h-screen flex items-center justify-center p-4">
+    <div class="w-full max-w-5xl bg-gray-800 shadow-xl rounded-2xl overflow-hidden">
+        <header class="bg-blue-600 text-white p-6 relative"> <!-- Added relative positioning -->
+            <!-- Home Button -->
+            <a href="#" class="absolute top-4 left-4 sm:top-6 sm:left-6 inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-lg shadow-sm text-blue-700 bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-blue-600 focus:ring-white">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1.5" viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
+                </svg>
+                Home
+            </a>
+            
+            <h1 class="text-3xl font-bold text-center">Advanced ATS-Friendly Resume Checker</h1>
+            <p class="text-center text-blue-100 mt-2">
+                Get a detailed analysis of your resume against a job description.
+            </p>
+        </header>
+
+        <main class="p-6 md:p-8 grid md:grid-cols-2 gap-6">
+            <!-- Input Column -->
+            <div class="flex flex-col gap-6">
+                <!-- File Input Section -->
+                <div>
+                    <label for="resume-file" class="block text-sm font-medium text-gray-300 mb-2">
+                        Upload Your Resume
+                    </label>
+                    <input id="resume-file" type="file" class="w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" accept=".txt,.pdf,.docx">
+                    <p class="text-xs text-gray-500 mt-2">
+                        Note: <strong class="text-gray-400">.txt, .pdf,</strong> and <strong class="text-gray-400">.docx</strong> files can be auto-read. Old <strong class="text-gray-400">.doc</strong> files are not supported.
+                    </p>
+                </div>
+                
+                <div>
+                    <label for="resume-text" class="block text-sm font-medium text-gray-300 mb-2">
+                        Resume Text
+                    </label>
+                    <textarea id="resume-text" rows="13" class="w-full p-3 border border-gray-600 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-gray-700 text-gray-200" placeholder="Text from your uploaded file will appear here, or you can paste it manually..."></textarea>
+                </div>
+                
+                <div>
+                    <label for="job-desc" class="block text-sm font-medium text-gray-300 mb-2">
+                        Paste the Job Description
+                    </label>
+                    <textarea id="job-desc" rows="15" class="w-full p-3 border border-gray-600 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-gray-700 text-gray-200" placeholder="Paste the full job description here..."></textarea>
+                </div>
+                <button id="check-button" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg shadow-md hover:bg-blue-700 transition duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-800">
+                    Run Advanced Check
+                </button>
+            </div>
+
+            <!-- Results Column -->
+            <div class="flex flex-col gap-6">
+                <div id="results-container" class="bg-gray-700 p-6 rounded-lg border border-gray-600 min-h-[400px]">
+                    <h2 class="text-2xl font-bold text-white mb-4">Your Analysis</h2>
+                    <div id="results-content" class="text-gray-300 space-y-4">
+                        <p>Your results will appear here after you run the check.</p>
+                        <div class="pt-4">
+                            <h3 class="font-semibold text-gray-200">What This Tool Checks:</h3>
+                            <ul class="list-disc list-inside text-sm space-y-1 mt-2">
+                                <li><strong>Keyword Match:</strong> Compares relevant words from the job description to your resume.</li>
+                                <li><strong>Skills Analysis:</strong> Checks for hard and soft skills.</li>
+                                <li><strong>Content Analysis:</strong> Looks for action verbs, weak words, metrics, and word count.</li>
+                                <li><strong>ATS Basics:</strong> Checks for common headings and contact info.</li>
+                            </ul>
+                            <p class="text-sm font-medium text-yellow-300 bg-yellow-900 bg-opacity-50 p-3 rounded-lg mt-4">
+                                <strong>Disclaimer:</strong> This is a simplified check. A real ATS is more complex. Always ensure your original resume file (PDF/DOCX) avoids tables, columns, images, and fancy fonts for best results.
+                            </p>
+                        </div>
+                    </div>
+                    <!-- Loading Spinner -->
+                    <div id="loading-spinner" class="hidden items-center justify-center pt-16">
+                        <svg class="animate-spin -ml-1 mr-3 h-10 w-10 text-blue-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span id="loading-text" class="text-lg text-gray-300">Analyzing...</span>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const checkButton = document.getElementById('check-button');
+        const resumeInput = document.getElementById('resume-text');
+        const jobDescInput = document.getElementById('job-desc');
+        const fileInput = document.getElementById('resume-file');
+        const resultsContent = document.getElementById('results-content');
+        const loadingSpinner = document.getElementById('loading-spinner');
+        const loadingText = document.getElementById('loading-text');
+
+        // --- Analysis Keyword Sets ---
+
+        const STOP_WORDS = new Set(['a', 'an', 'and', 'are', 'as', 'at', 'be', 'by', 'for', 'from', 'has', 'he', 'in', 'is', 'it', 'its', 'of', 'on', 'that', 'the', 'to', 'was', 'were', 'will', 'with', 'you', 'your', 'we', 'our', 'or', 'about', 'all', 'etc', 'if', 'into', 'not', 'such', 'then', 'than', 'this', 'these', 'those']);
+        
+        const COMMON_HEADINGS = ['summary', 'profile', 'objective', 'experience', 'employment', 'history', 'education', 'skills', 'abilities', 'certifications', 'licenses', 'projects', 'publications', 'references', 'contact'];
+
+        const HARD_SKILLS = new Set(['python', 'java', 'javascript', 'c++', 'c#', 'sql', 'mysql', 'postgresql', 'mongodb', 'react', 'angular', 'vue', 'node.js', 'django', 'flask', 'spring', 'html', 'css', 'tailwind', 'aws', 'azure', 'gcp', 'docker', 'kubernetes', 'terraform', 'git', 'github', 'gitlab', 'jira', 'agile', 'scrum', 'excel', 'powerpoint', 'word', 'photoshop', 'illustrator', 'figma', 'sketch', 'tableau', 'power bi', 'salesforce', 'seo', 'sem', 'google analytics', 'data analysis', 'machine learning', 'ai', 'tensorflow', 'pytorch', 'scikit-learn', 'pandas', 'numpy']);
+
+        const SOFT_SKILLS = new Set(['communication', 'leadership', 'teamwork', 'problem-solving', 'critical thinking', 'creativity', 'adaptability', 'time management', 'organization', 'collaboration', 'interpersonal skills', 'work ethic', 'attention to detail', 'negotiation', 'conflict resolution', 'management', 'mentoring', 'strategic planning', 'emotional intelligence']);
+
+        const ACTION_VERBS = new Set(['managed', 'led', 'developed', 'created', 'implemented', 'achieved', 'improved', 'increased', 'decreased', 'reduced', 'optimized', 'negotiated', 'trained', 'mentored', 'analyzed', 'designed', 'built', 'launched', 'grew', 'streamlined', 'automated', 'researched', 'presented', 'authored', 'directed', 'coordinated', 'pioneered', 'revitalized', 'secured', 'delivered']);
+
+        const WEAK_WORDS = new Set(['helped', 'assisted', 'responsible for', 'tasked with', 'familiar with', 'worked on', 'involved in', 'duties included', 'participated in', 'tried', 'attempted']);
+
+        // --- File Reading Logic ---
+
+        fileInput.addEventListener('change', async (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+            resumeInput.value = '';
+            showLoading('Reading file...');
+            try {
+                const fileExtension = file.name.split('.').pop().toLowerCase();
+                if (fileExtension === "txt") await handleTxtFile(file);
+                else if (fileExtension === "pdf") await handlePdfFile(file);
+                else if (fileExtension === "docx") await handleDocxFile(file);
+                else handleUnsupportedFile(fileExtension);
+            } catch (error) {
+                console.error("File processing error:", error);
+                showError(`Error reading file: ${error.message}`);
+            } finally {
+                fileInput.value = '';
+            }
+        });
+
+        async function handleTxtFile(file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                resumeInput.value = e.target.result;
+                showSuccess(`File '${file.name}' loaded successfully!`);
+            };
+            reader.readAsText(file);
+        }
+
+        async function handlePdfFile(file) {
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                try {
+                    const typedArray = new Uint8Array(e.target.result);
+                    const pdf = await pdfjsLib.getDocument(typedArray).promise;
+                    let fullText = '';
+                    for (let i = 1; i <= pdf.numPages; i++) {
+                        const page = await pdf.getPage(i);
+                        const textContent = await page.getTextContent();
+                        fullText += textContent.items.map(item => item.str).join(' ') + '\n';
+                    }
+                    resumeInput.value = fullText;
+                    showSuccess(`File '${file.name}' loaded successfully!`);
+                } catch (error) {
+                    console.error("PDF parsing error:", error);
+                    showError(`Failed to parse PDF: ${error.message}`);
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        async function handleDocxFile(file) {
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                try {
+                    const arrayBuffer = e.target.result;
+                    const result = await mammoth.extractRawText({ arrayBuffer: arrayBuffer });
+                    resumeInput.value = result.value;
+                    showSuccess(`File '${file.name}' loaded successfully!`);
+                } catch (error) {
+                    console.error("DOCX parsing error:", error);
+                    showError(`Failed to parse .docx file: ${error.message}`);
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function handleUnsupportedFile(extension) {
+            showError(`Cannot auto-read '.${extension}' files. Only .txt, .pdf, and .docx are supported.`);
+        }
+
+        // --- UI Feedback Functions ---
+
+        function showLoading(message) {
+            resultsContent.classList.add('hidden');
+            loadingText.textContent = message || 'Analyzing...';
+            loadingSpinner.classList.remove('hidden');
+            loadingSpinner.classList.add('flex');
+        }
+
+        function hideLoading() {
+            loadingSpinner.classList.add('hidden');
+            loadingSpinner.classList.remove('flex');
+            resultsContent.classList.remove('hidden');
+            loadingText.textContent = 'Analyzing...';
+        }
+
+        function showSuccess(message) {
+            hideLoading();
+            resultsContent.innerHTML = `<p class="text-green-400 font-semibold">${message}</p>`;
+        }
+
+        function showError(message) {
+            hideLoading();
+            resultsContent.innerHTML = `<p class="text-red-400 font-semibold">${message}</p>`;
+        }
+
+        // --- Analysis Logic ---
+
+        checkButton.addEventListener('click', () => {
+            const resumeText = resumeInput.value;
+            const jobDescText = jobDescInput.value;
+            if (!resumeText || !jobDescText) {
+                showError("Please provide both your resume text and the job description.");
+                return;
+            }
+            showLoading('Analyzing...');
+            setTimeout(() => {
+                try {
+                    runAnalysis(resumeText, jobDescText);
+                } catch (error) {
+                    console.error("Analysis error:", error);
+                    showError("An error occurred during analysis.");
+                }
+                hideLoading();
+            }, 500);
+        });
+
+        function cleanTextToSet(text) {
+            const words = text.toLowerCase().replace(/[^\w\s]|_/g, "").replace(/\s+/g, " ").split(/\s+/);
+            return new Set(words.filter(word => word.length > 2 && !STOP_WORDS.has(word)));
+        }
+
+        /**
+         * Finds which items from a set are present in a body of text.
+         * @param {string} text - The text to search (e.g., resumeLower).
+         * @param {Set<string>} wordSet - The set of words to search for (e.g., HARD_SKILLS).
+         * @returns {Array<string>} A list of found words.
+         */
+        function findMatchesInText(text, wordSet) {
+            const found = [];
+            wordSet.forEach(word => {
+                // Escape special regex characters like '+', '#', '.'
+                const escapedWord = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
+                const regex = new RegExp(`\\b${escapedWord}\\b`, 'gi');
+                if (regex.test(text)) {
+                    found.push(word);
+                }
+            });
+            return found;
+        }
+
+        function runAnalysis(resumeText, jobDescText) {
+            const resumeWords = cleanTextToSet(resumeText);
+            const jobWords = cleanTextToSet(jobDescText);
+            const resumeLower = resumeText.toLowerCase();
+            const jobDescLower = jobDescText.toLowerCase();
+
+            // 1. Keyword Analysis
+            const matchingKeywords = [];
+            const missingKeywords = [];
+            jobWords.forEach(jobWord => {
+                if (resumeWords.has(jobWord)) {
+                    matchingKeywords.push(jobWord);
+                } else {
+                    missingKeywords.push(jobWord);
+                }
+            });
+            const matchScore = jobWords.size > 0 ? (matchingKeywords.length / jobWords.size) * 100 : 0;
+
+            // 2. Skills Analysis
+            const jdHardSkills = findMatchesInText(jobDescLower, HARD_SKILLS);
+            const resumeHardSkills = findMatchesInText(resumeLower, HARD_SKILLS);
+            const jdSoftSkills = findMatchesInText(jobDescLower, SOFT_SKILLS);
+            const resumeSoftSkills = findMatchesInText(resumeLower, SOFT_SKILLS);
+
+            // 3. Content Analysis
+            const actionVerbsFound = findMatchesInText(resumeLower, ACTION_VERBS);
+            const weakWordsFound = findMatchesInText(resumeLower, WEAK_WORDS);
+            const metrics = resumeLower.match(/\b\d[\d,.]*(\%|\b)|(\$)\d[\d,.]*\b/g) || [];
+            const wordCount = resumeLower.split(/\s+/).filter(Boolean).length;
+
+            // 4. ATS-Friendliness Analysis
+            const foundHeadings = [];
+            COMMON_HEADINGS.forEach(heading => {
+                const regex = new RegExp(`(^|\\n|\\s)${heading}(\\s|:|\\n|$)`, 'i');
+                if (regex.test(resumeLower)) {
+                    foundHeadings.push(heading);
+                }
+            });
+            const hasEmail = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/.test(resumeText);
+            const hasPhone = /(\+\d{1,2}\s?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}/.test(resumeText);
+
+            // 5. Display Results
+            displayResults({
+                matchScore, missingKeywords,
+                jdHardSkills, resumeHardSkills, jdSoftSkills, resumeSoftSkills,
+                actionVerbsFound, weakWordsFound, metrics, wordCount,
+                foundHeadings, hasEmail, hasPhone
+            });
+        }
+
+        function displayResults(data) {
+            const {
+                matchScore, missingKeywords,
+                jdHardSkills, resumeHardSkills, jdSoftSkills, resumeSoftSkills,
+                actionVerbsFound, weakWordsFound, metrics, wordCount,
+                foundHeadings, hasEmail, hasPhone
+            } = data;
+
+            const scoreColor = matchScore > 70 ? 'text-green-400' : matchScore > 40 ? 'text-yellow-400' : 'text-red-400';
+            const scoreMessage = matchScore > 70 ? 'Excellent Match!' : matchScore > 40 ? 'Good Match' : 'Needs Improvement';
+
+            // --- Main HTML Structure with Tabs ---
+            resultsContent.innerHTML = `
+                <div class="space-y-4">
+                    <!-- Score Section -->
+                    <div>
+                        <h3 class="text-lg font-semibold text-white mb-2">Overall Keyword Match Score</h3>
+                        <div class="bg-gray-600 rounded-full h-6 overflow-hidden">
+                            <div class="bg-blue-600 h-6 rounded-full flex items-center justify-center text-white text-sm font-medium" style="width: ${Math.max(matchScore, 5)}%;">
+                                ${matchScore.toFixed(0)}%
+                            </div>
+                        </div>
+                        <p class="${scoreColor} text-center font-semibold mt-2">${scoreMessage}</p>
+                    </div>
+                    
+                    <!-- Tab Navigation -->
+                    <div class="border-b border-gray-600">
+                        <nav class="-mb-px flex space-x-4" aria-label="Tabs" role="tablist">
+                            <button role="tab" aria-controls="keywords-panel" id="keywords-tab" class="tab-button whitespace-nowrap py-3 px-4 border-b-2 border-transparent font-medium text-sm text-gray-400 hover:text-white" aria-selected="true">
+                                Keyword Match
+                            </button>
+                            <button role="tab" aria-controls="skills-panel" id="skills-tab" class="tab-button whitespace-nowrap py-3 px-4 border-b-2 border-transparent font-medium text-sm text-gray-400 hover:text-white" aria-selected="false">
+                                Skills Analysis
+                            </button>
+                            <button role="tab" aria-controls="content-panel" id="content-tab" class="tab-button whitespace-nowrap py-3 px-4 border-b-2 border-transparent font-medium text-sm text-gray-400 hover:text-white" aria-selected="false">
+                                Content Analysis
+                            </button>
+                        </nav>
+                    </div>
+
+                    <!-- Tab Panels -->
+                    <div class="pt-4">
+                        <div role="tabpanel" id="keywords-panel" class="space-y-4">
+                            ${populateKeywordsPanel(missingKeywords)}
+                        </div>
+                        <div role="tabpanel" id="skills-panel" class="hidden space-y-4">
+                            ${populateSkillsPanel(jdHardSkills, resumeHardSkills, jdSoftSkills, resumeSoftSkills)}
+                        </div>
+                        <div role="tabpanel" id="content-panel" class="hidden space-y-4">
+                            ${populateContentPanel(actionVerbsFound, weakWordsFound, metrics, wordCount, foundHeadings, hasEmail, hasPhone)}
+                        </div>
+                    </div>
+                </div>`;
+
+            // --- Add Tab-Switching Logic ---
+            const tabs = document.querySelectorAll('.tab-button');
+            const panels = document.querySelectorAll('[role="tabpanel"]');
+            
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    // Deactivate all
+                    tabs.forEach(t => t.setAttribute('aria-selected', 'false'));
+                    panels.forEach(p => p.classList.add('hidden'));
+                    
+                    // Activate clicked
+                    tab.setAttribute('aria-selected', 'true');
+                    const panelId = tab.getAttribute('aria-controls');
+                    document.getElementById(panelId).classList.remove('hidden');
+                });
+            });
+        }
+        
+        // --- Panel Population Functions ---
+
+        function populateKeywordsPanel(missingKeywords) {
+            const keywordsToShow = missingKeywords.slice(0, 20).join(', ');
+            const moreKeywordsCount = missingKeywords.length - 20;
+            
+            return `
+                <div>
+                    <h3 class="text-lg font-semibold text-white mb-2">Missing Keywords</h3>
+                    ${missingKeywords.length > 0 ? `
+                        <p class="text-sm text-gray-400 mb-2">Consider adding these relevant keywords from the job description (if applicable):</p>
+                        <div class="bg-gray-800 border border-gray-600 rounded-lg p-3 text-sm text-gray-200 max-h-48 overflow-y-auto">
+                            ${keywordsToShow}
+                            ${moreKeywordsCount > 0 ? `... and ${moreKeywordsCount} more.` : ''}
+                        </div>
+                    ` : `
+                        <p class="text-green-400 font-medium">Great job! You seem to have all the major keywords.</p>
+                    `}
+                </div>`;
+        }
+
+        function populateSkillsPanel(jdHard, resHard, jdSoft, resSoft) {
+            const missingHard = jdHard.filter(skill => !resHard.includes(skill));
+            const missingSoft = jdSoft.filter(skill => !resSoft.includes(skill));
+
+            const renderList = (items, color) => items.length ? items.map(item => `<span class="inline-block bg-gray-600 text-gray-200 text-xs font-medium mr-2 mb-2 px-2.5 py-0.5 rounded-full">${item}</span>`).join('') : `<span class="text-gray-500 text-sm">None found.</span>`;
+            const renderMissing = (items) => items.length ? items.map(item => `<span class="inline-block bg-red-800 text-red-200 text-xs font-medium mr-2 mb-2 px-2.5 py-0.5 rounded-full">${item}</span>`).join('') : `<span class="text-green-400 text-sm">None missing!</span>`;
+
+            return `
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Hard Skills -->
+                    <div>
+                        <h4 class="text-md font-semibold text-white mb-2">Hard Skills</h4>
+                        <div class="bg-gray-800 border border-gray-600 rounded-lg p-3 space-y-3">
+                            <div>
+                                <h5 class="text-sm font-medium text-gray-400 mb-1">Found in Job Description:</h5>
+                                <div>${renderList(jdHard)}</div>
+                            </div>
+                            <div>
+                                <h5 class="text-sm font-medium text-gray-400 mb-1">Found in Your Resume:</h5>
+                                <div>${renderList(resHard)}</div>
+                            </div>
+                            <div>
+                                <h5 class="text-sm font-medium text-yellow-300 mb-1">Missing from Your Resume:</h5>
+                                <div>${renderMissing(missingHard)}</div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Soft Skills -->
+                    <div>
+                        <h4 class="text-md font-semibold text-white mb-2">Soft Skills</h4>
+                        <div class="bg-gray-800 border border-gray-600 rounded-lg p-3 space-y-3">
+                            <div>
+                                <h5 class="text-sm font-medium text-gray-400 mb-1">Found in Job Description:</h5>
+                                <div>${renderList(jdSoft)}</div>
+                            </div>
+                            <div>
+                                <h5 class="text-sm font-medium text-gray-400 mb-1">Found in Your Resume:</h5>
+                                <div>${renderList(resSoft)}</div>
+                            </div>
+                             <div>
+                                <h5 class="text-sm font-medium text-yellow-300 mb-1">Missing from Your Resume:</h5>
+                                <div>${renderMissing(missingSoft)}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+        }
+
+        function populateContentPanel(actionVerbs, weakWords, metrics, wordCount, headings, hasEmail, hasPhone) {
+            const renderBadge = (label, value, color) => `
+                <div class="flex items-center justify-between bg-gray-800 border border-gray-600 rounded-lg px-4 py-2">
+                    <span class="text-sm font-medium text-gray-300">${label}</span>
+                    <span class="font-semibold ${color}">${value}</span>
+                </div>`;
+            
+            const wordCountColor = wordCount > 800 ? 'text-red-400' : wordCount < 300 ? 'text-yellow-400' : 'text-green-400';
+            const actionVerbColor = actionVerbs.length > 10 ? 'text-green-400' : actionVerbs.length > 5 ? 'text-yellow-400' : 'text-red-400';
+            const metricsColor = metrics.length > 5 ? 'text-green-400' : metrics.length > 1 ? 'text-yellow-400' : 'text-red-400';
+            const weakWordColor = weakWords.length === 0 ? 'text-green-400' : weakWords.length < 3 ? 'text-yellow-400' : 'text-red-400';
+
+            return `
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Column 1: Metrics -->
+                    <div class="space-y-3">
+                        ${renderBadge('Word Count', `${wordCount} (Est. 400-600)`, wordCountColor)}
+                        ${renderBadge('Action Verbs', `${actionVerbs.length} Found`, actionVerbColor)}
+                        ${renderBadge('Quantifiable Metrics', `${metrics.length} Found`, metricsColor)}
+                        ${renderBadge('Weak Words', `${weakWords.length} Found`, weakWordColor)}
+                    </div>
+                    <!-- Column 2: ATS Basics -->
+                    <div class="space-y-3">
+                         <div>
+                            <h3 class="text-md font-semibold text-white mb-2">ATS Basics</h3>
+                            <div class="bg-gray-800 border border-gray-600 rounded-lg p-3 space-y-2">
+                                <h4 class="text-sm font-medium text-gray-400">Contact Info:</h4>
+                                <ul class="list-disc list-inside text-sm">
+                                    <li class="${hasEmail ? 'text-green-400' : 'text-red-400'}"><span class="text-gray-300">Email:</span> ${hasEmail ? 'Found' : 'Not Found'}</li>
+                                    <li class="${hasPhone ? 'text-green-400' : 'text-red-400'}"><span class="text-gray-300">Phone:</span> ${hasPhone ? 'Found' : 'Not Found'}</li>
+                                </ul>
+                                <h4 class="text-sm font-medium text-gray-400 pt-2">Section Headings:</h4>
+                                <ul class="list-disc list-inside text-sm">
+                                    ${headings.length > 0 ? headings.map(h => `<li class="text-green-400"><span class="text-gray-300 capitalize">${h}</span></li>`).join('') : '<li class="text-red-400">No standard headings found.</li>'}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Weak Words Detail -->
+                ${weakWords.length > 0 ? `
+                    <div>
+                        <h4 class="text-md font-semibold text-white mb-2">Weak Words Found</h4>
+                        <p class="text-sm text-gray-400 mb-2">Consider replacing these with stronger action verbs:</p>
+                        <div class="bg-gray-800 border border-gray-600 rounded-lg p-3 text-sm text-yellow-200">
+                            ${weakWords.join(', ')}
+                        </div>
+                    </div>
+                ` : ''}
+            `;
+        }
+
+    </script>
+</body>
+</html>

@@ -143,7 +143,7 @@
     <!-- Sidebar & Controls (no-print) -->
     <aside class="no-print w-full md:w-1/4 bg-slate-800 p-4 overflow-y-auto shadow-lg flex flex-col transition-all duration-300">
         <h1 class="text-3xl font-bold text-sky-400 mb-6">AI Resume Builder</h1>
-<a href="../home/home.html" class="template-btn bg-slate-700 hover:bg-slate-600 text-sm font-semibold py-2 px-3 rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-400">
+<a href="../home/home.html" class="template-btn bg-slate-700 hover:bg-slate-600 text-sm font-semibold py-2 px-3 rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-400 mb-4">
     Home
 </a>
         <!-- Template Selector -->
@@ -174,7 +174,12 @@
                 <li><button data-section="skills" class="section-btn w-full text-left py-2 px-3 rounded-lg flex items-center gap-3 hover:bg-slate-700 transition-colors duration-200"><i class="fas fa-code w-5 text-center"></i> Skills</button></li>
                 <li><button data-section="projects" class="section-btn w-full text-left py-2 px-3 rounded-lg flex items-center gap-3 hover:bg-slate-700 transition-colors duration-200"><i class="fas fa-project-diagram w-5 text-center"></i> Projects</button></li>
                 <li><button data-section="certifications" class="section-btn w-full text-left py-2 px-3 rounded-lg flex items-center gap-3 hover:bg-slate-700 transition-colors duration-200"><i class="fas fa-certificate w-5 text-center"></i> Certifications</button></li>
-                <li><button data-section="ats-checker" class="section-btn w-full text-left py-2 px-3 rounded-lg flex items-center gap-3 hover:bg-slate-700 transition-colors duration-200"><i class="fas fa-clipboard-check w-5 text-center"></i> ATS Checker</button></li>
+                <!-- Updated ATS Checker link -->
+                <li>
+                    <a href="ats.html" class="section-btn w-full text-left py-2 px-3 rounded-lg flex items-center gap-3 hover:bg-slate-700 transition-colors duration-200">
+                        <i class="fas fa-clipboard-check w-5 text-center"></i> ATS Checker
+                    </a>
+                </li>
             </ul>
         </nav>
 
@@ -214,7 +219,7 @@
                 <div id="summary-section" class="section-content hidden">
                     <h2 class="text-2xl font-bold mb-4">Professional Summary</h2>
                     <textarea name="summary" rows="5" placeholder="A brief summary of your professional background and skills." class="w-full p-3 rounded-lg bg-slate-800 border border-slate-700 focus:ring-2 focus:ring-blue-400 focus:border-blue-400"></textarea>
-                    
+                    <!-- Removed AI button from here -->
                 </div>
 
                 <!-- Work Experience Section -->
@@ -229,7 +234,7 @@
                                 <input type="text" name="end_date[]" placeholder="End Date" class="w-1/2 p-2 rounded-lg bg-slate-800 border border-slate-700">
                             </div>
                             <textarea name="job_description[]" rows="4" placeholder="Job Description (use bullet points)" class="w-full p-2 rounded-lg bg-slate-800 border border-slate-700"></textarea>
-                           
+                           <!-- Removed AI button from here -->
                         </div>
                     </div>
                     <button type="button" id="add-experience" class="mt-4 w-full bg-slate-700 hover:bg-slate-600 text-white font-bold py-2 rounded-xl transition-colors duration-200">
@@ -259,7 +264,7 @@
                 <div id="skills-section" class="section-content hidden">
                     <h2 class="text-2xl font-bold mb-4">Skills</h2>
                     <input type="text" name="skills" placeholder="Comma-separated skills (e.g., JavaScript, Python, React)" class="w-full p-3 rounded-lg bg-slate-800 border border-slate-700 focus:ring-2 focus:ring-blue-400 focus:border-blue-400">
-                   
+                   <!-- Removed AI button from here -->
                 </div>
 
                 <!-- Projects Section -->
@@ -270,7 +275,7 @@
                             <input type="text" name="project_name[]" placeholder="Project Name" class="w-full p-2 mb-2 rounded-lg bg-slate-800 border border-slate-700">
                             <input type="url" name="project_url[]" placeholder="Project URL" class="w-full p-2 mb-2 rounded-lg bg-slate-800 border border-slate-700">
                             <textarea name="project_description[]" rows="4" placeholder="Project Description (use bullet points)" class="w-full p-2 rounded-lg bg-slate-800 border border-slate-700"></textarea>
-                        
+                        <!-- Removed AI button from here -->
                         </div>
                     </div>
                     <button type="button" id="add-project" class="mt-4 w-full bg-slate-700 hover:bg-slate-600 text-white font-bold py-2 rounded-xl transition-colors duration-200">
@@ -284,20 +289,8 @@
                     <input type="text" name="certifications" placeholder="List certifications (e.g., AWS Certified Solutions Architect)" class="w-full p-3 rounded-lg bg-slate-800 border border-slate-700 focus:ring-2 focus:ring-blue-400 focus:border-blue-400">
                 </div>
 
-                <!-- ATS Checker Section -->
-                <div id="ats-checker-section" class="section-content hidden">
-                    <h2 class="text-2xl font-bold mb-4">ATS Analysis</h2>
-                    <div class="mb-4">
-                        <label for="ats-company-ref" class="block text-sm font-medium text-gray-400 mb-2">Target Company (for tailored analysis)</label>
-                        <input type="text" id="ats-company-ref" name="ats-company-ref" placeholder="e.g., Google, Microsoft, TCS" class="w-full p-3 rounded-lg bg-slate-800 border border-slate-700 focus:ring-2 focus:ring-blue-400 focus:border-blue-400">
-                    </div>
-                    <div id="ats-report" class="bg-slate-800 p-4 rounded-xl">
-                        <p class="text-gray-400">Enter a target company and click "Run ATS Analysis" to get a report on how well your resume matches its likely requirements.</p>
-                    </div>
-                    <button type="button" id="run-ats-btn" class="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded-xl transition-colors duration-200">
-                        <i class="fas fa-play-circle mr-2"></i> Run ATS Analysis
-                    </button>
-                </div>
+                <!-- ATS Checker Section (REMOVED) -->
+                <!-- The content for this section is now presumably in ats.html -->
 
             </form>
         </div>
@@ -318,14 +311,14 @@
 
             const form = document.getElementById('resume-form');
             const previewContainer = document.getElementById('resume-content');
-            const sectionBtns = document.querySelectorAll('.section-btn');
+            const sectionBtns = document.querySelectorAll('.section-btn[data-section]'); // Select only buttons with data-section
             const sections = document.querySelectorAll('.section-content');
             const templateBtns = document.querySelectorAll('.template-btn');
             const downloadPdfBtn = document.getElementById('download-pdf-btn');
             const printBtn = document.getElementById('print-btn');
             const aiMessageBox = document.getElementById('ai-message-box');
-            const runAtsBtn = document.getElementById('run-ats-btn');
-            const apiKey = "AIzaSyC3ZolnvIYAhjMmz7yegS_DH3ChBQVpyGA"; 
+            // const runAtsBtn = document.getElementById('run-ats-btn'); // This button is no longer in this file
+            // const apiKey = "..."; // API key no longer needed here
 
             // --- SUPABASE SETUP ---
             // 1. IMPORTANT: Replace these with your actual Supabase project URL and anon key.
@@ -584,8 +577,14 @@
             sectionBtns.forEach(btn => {
                 btn.addEventListener('click', () => {
                     const sectionId = btn.getAttribute('data-section');
+                    // Hide all sections
                     sections.forEach(sec => sec.classList.add('hidden'));
-                    document.getElementById(sectionId + '-section').classList.remove('hidden');
+                    // Show the clicked section
+                    const targetSection = document.getElementById(sectionId + '-section');
+                    if (targetSection) {
+                         targetSection.classList.remove('hidden');
+                    }
+                    // Update button active states
                     sectionBtns.forEach(b => b.classList.remove('active', 'bg-slate-700'));
                     btn.classList.add('active', 'bg-slate-700');
                 });
@@ -632,7 +631,7 @@
                             company,
                             job_title,
                             start_date: entry.querySelector('[name="start_date[]"]').value,
-                            end_date: entry.querySelector('[name="end_date[]"]').value,
+                            end_date: entry.querySelector('[name-="end_date[]"]').value,
                             job_description: entry.querySelector('[name="job_description[]"]').value
                         });
                     }
@@ -685,9 +684,7 @@
                         <input type="text" name="end_date[]" placeholder="End Date" class="w-1/2 p-2 rounded-lg bg-slate-800 border border-slate-700">
                     </div>
                     <textarea name="job_description[]" rows="4" placeholder="Job Description (use bullet points)" class="w-full p-2 rounded-lg bg-slate-800 border border-slate-700"></textarea>
-                    <button type="button" class="ai-button mt-2 w-full bg-sky-600 hover:bg-sky-700 text-white font-bold py-2 rounded-xl transition-colors duration-200 text-sm" data-ai-action="experience">
-                        <i class="fas fa-magic mr-2"></i> Enhance with AI
-                    </button>
+                    <!-- AI Button Removed -->
                 `;
                 container.appendChild(newEntry);
                 addInputListeners();
@@ -717,9 +714,7 @@
                     <input type="text" name="project_name[]" placeholder="Project Name" class="w-full p-2 mb-2 rounded-lg bg-slate-800 border border-slate-700">
                     <input type="url" name="project_url[]" placeholder="Project URL" class="w-full p-2 mb-2 rounded-lg bg-slate-800 border border-slate-700">
                     <textarea name="project_description[]" rows="4" placeholder="Project Description (use bullet points)" class="w-full p-2 rounded-lg bg-slate-800 border border-slate-700"></textarea>
-                    <button type="button" class="ai-button mt-2 w-full bg-sky-600 hover:bg-sky-700 text-white font-bold py-2 rounded-xl transition-colors duration-200 text-sm" data-ai-action="project">
-                        <i class="fas fa-magic mr-2"></i> Enhance with AI
-                    </button>
+                    <!-- AI Button Removed -->
                 `;
                 container.appendChild(newEntry);
                 addInputListeners();
@@ -730,11 +725,7 @@
                     input.removeEventListener('input', updateResumeData); // Prevent duplicates
                     input.addEventListener('input', updateResumeData);
                 });
-                 // Re-bind AI button listeners for dynamically added elements
-                document.querySelectorAll('.ai-button').forEach(btn => {
-                    btn.removeEventListener('click', handleAiButtonClick); // Prevent multiple listeners
-                    btn.addEventListener('click', handleAiButtonClick);
-                });
+                 // AI buttons are no longer dynamically added here, so no need to re-bind
             };
 
             const showAiMessage = (message, isError = false) => {
@@ -746,213 +737,9 @@
                 aiMessageBox.classList.remove('show');
             };
 
-            // --- AI Functions Start ---
-
-            // Function to generate plain text content
-            const generateTextContent = async (prompt) => {
-                if (!apiKey) {
-                    console.error("API key is not set.");
-                    showAiMessage('Error: API key is not configured.', true);
-                    return null;
-                }
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
-                const payload = { contents: [{ parts: [{ text: prompt }] }] };
-
-                try {
-                    const response = await fetch(apiUrl, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
-                    if (!response.ok) {
-                        console.error('Gemini API Error:', await response.text());
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    const result = await response.json();
-                    return result.candidates?.[0]?.content?.parts?.[0]?.text || null;
-                } catch (error) {
-                    console.error('Error calling Gemini API for text:', error);
-                    return null;
-                }
-            };
-
-            // Function to generate structured JSON content
-            const generateJsonContent = async (prompt, generationConfig) => {
-                 if (!apiKey) {
-                    console.error("API key is not set.");
-                    showAiMessage('Error: API key is not configured.', true);
-                    return null;
-                }
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
-                const payload = {
-                    contents: [{ parts: [{ text: prompt }] }],
-                    generationConfig: generationConfig
-                };
-
-                try {
-                    const response = await fetch(apiUrl, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
-                     if (!response.ok) {
-                        console.error('Gemini API Error:', await response.text());
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    const result = await response.json();
-                    return result.candidates?.[0]?.content?.parts?.[0]?.text || null;
-                } catch (error) {
-                    console.error('Error calling Gemini API for JSON:', error);
-                    return null;
-                }
-            };
-
-            const getAiPrompt = (action, input) => {
-                switch (action) {
-                    case 'summary':
-                        return `Generate a professional summary for a resume based on the following information: ${input.name || ''}, ${input.title || ''}, and their skills: ${input.skills.join(', ')}. The summary should be concise, professional, and impactful.`;
-                    case 'experience':
-                        return `Enhance the following job description for a resume, making it more professional and achievement-oriented. Use strong action verbs and quantify results where possible. Format as a bulleted list.\nJob Title: ${input.job_title}\nCompany: ${input.company}\nOriginal Description: ${input.job_description}`;
-                    case 'skills':
-                        return `Suggest a list of relevant skills for a resume for a person with the professional title "${input.title || ''}" and with the following current skills: ${input.skills.join(', ')}. Provide a comma-separated list of skills only, without any other text.`;
-                    case 'project':
-                        return `Enhance the following project description for a resume, making it professional and impactful. Use strong action verbs and quantify results. Format as a bulleted list.\nProject Name: ${input.project_name}\nOriginal Description: ${input.project_description}`;
-                    case 'ats-checker':
-                        const fullResumeText = `Resume for ${input.name}. Professional Title: ${input.title}. Summary: ${input.summary}. Work Experience: ${input.experience}. Education: ${input.education}. Skills: ${input.skills}. Projects: ${input.projects}. Certifications: ${input.certifications}.`;
-                        let atsPrompt = `Analyze the following resume text from an Applicant Tracking System (ATS) perspective. Provide a professional analysis in a structured JSON format. The analysis should include a "score" (a number from 0 to 100), a list of "keywords_found" (important terms from the resume), and a list of "suggestions" (actionable advice to improve ATS compatibility).`;
-
-                        if (input.companyRef) {
-                            atsPrompt = `Analyze the following resume text from an Applicant Tracking System (ATS) perspective, specifically tailoring the analysis for a job application at a company like **${input.companyRef}**. Provide a professional analysis in a structured JSON format. The analysis should include a "score" (a number from 0 to 100 on its suitability for ${input.companyRef}), a list of "keywords_found" (important terms from the resume), a list of "keywords_missing" (keywords relevant for ${input.companyRef} that are not on the resume), and a list of "suggestions" (actionable advice to improve ATS compatibility for ${input.companyRef}).`;
-                        }
-                        atsPrompt += " The response must be a valid JSON object. IMPORTANT: Your entire response must be ONLY the raw JSON object, without any surrounding text, explanations, or markdown formatting like ```json."
-                        return `${atsPrompt}\nResume: ${fullResumeText}`;
-                }
-            };
-
-            const handleAiButtonClick = async (event) => {
-                const btn = event.currentTarget;
-                const action = btn.getAttribute('data-ai-action');
-                let prompt;
-                let targetField;
-
-                switch (action) {
-                    case 'summary':
-                        prompt = getAiPrompt('summary', { name: resumeData.personal.name, title: resumeData.personal.title, skills: resumeData.skills });
-                        targetField = form.querySelector('[name="summary"]');
-                        break;
-                    case 'experience':
-                        const entry = btn.closest('.work-experience-entry');
-                        prompt = getAiPrompt('experience', {
-                            job_title: entry.querySelector('[name="job_title[]"]').value,
-                            company: entry.querySelector('[name="company[]"]').value,
-                            job_description: entry.querySelector('[name="job_description[]"]').value
-                        });
-                        targetField = entry.querySelector('[name="job_description[]"]');
-                        break;
-                    case 'skills':
-                         prompt = getAiPrompt('skills', { title: resumeData.personal.title, skills: resumeData.skills });
-                        targetField = form.querySelector('[name="skills"]');
-                        break;
-                    case 'project':
-                        const projectEntry = btn.closest('.project-entry');
-                        prompt = getAiPrompt('project', {
-                            project_name: projectEntry.querySelector('[name="project_name[]"]').value,
-                            project_description: projectEntry.querySelector('[name="project_description[]"]').value
-                        });
-                        targetField = projectEntry.querySelector('[name="project_description[]"]');
-                        break;
-                }
-
-                if (prompt && targetField) {
-                    showAiMessage('Generating with AI...');
-                    const generatedText = await generateTextContent(prompt);
-                    if (generatedText) {
-                        targetField.value = generatedText.replace(/^- /gm, '').replace(/^\* /gm, '');
-                        updateResumeData();
-                        hideAiMessage();
-                    } else {
-                        showAiMessage('Error generating content.', true);
-                        setTimeout(hideAiMessage, 3000);
-                    }
-                }
-            };
-
-            // ATS Checker functionality
-            runAtsBtn.addEventListener('click', async () => {
-                const reportDiv = document.getElementById('ats-report');
-                reportDiv.innerHTML = '<div class="text-center"><i class="fas fa-sync-alt fa-spin text-sky-400 text-xl"></i><p class="mt-2 text-sm text-gray-400">Analyzing resume...</p></div>';
-
-                const companyRef = document.getElementById('ats-company-ref').value;
-                const prompt = getAiPrompt('ats-checker', {
-                    ...resumeData.personal,
-                    summary: resumeData.summary.text,
-                    experience: resumeData.experience.map(exp => `${exp.job_title} at ${exp.company}: ${exp.job_description}`).join('\n'),
-                    education: resumeData.education.map(edu => `${edu.degree} from ${edu.school}`).join('\n'),
-                    skills: resumeData.skills.join(', '),
-                    projects: resumeData.projects.map(proj => `${proj.project_name}: ${proj.project_description}`).join('\n'),
-                    certifications: resumeData.certifications.text,
-                    companyRef: companyRef
-                });
-                
-                const generationConfig = {
-                    responseMimeType: "application/json",
-                    responseSchema: {
-                        type: "OBJECT",
-                        properties: {
-                            "score": { "type": "NUMBER" },
-                            "keywords_found": { "type": "ARRAY", "items": { "type": "STRING" } },
-                            "keywords_missing": { "type": "ARRAY", "items": { "type": "STRING" } },
-                            "suggestions": { "type": "ARRAY", "items": { "type": "STRING" } }
-                        }
-                    }
-                };
-
-                const result = await generateJsonContent(prompt, generationConfig);
-                if (result) {
-                    try {
-                        const jsonString = result.substring(result.indexOf('{'), result.lastIndexOf('}') + 1);
-                        const atsReport = JSON.parse(jsonString);
-
-                        // Render the report
-                        reportDiv.innerHTML = `
-                            <div class="space-y-4">
-                                <div class="flex items-center gap-4">
-                                    <div class="relative w-16 h-16">
-                                        <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                                            <circle class="text-gray-700 stroke-current" stroke-width="8" cx="50" cy="50" r="40" fill="transparent"></circle>
-                                            <circle class="text-sky-400 stroke-current" stroke-width="8" stroke-linecap="round" cx="50" cy="50" r="40" fill="transparent"
-                                                style="stroke-dasharray: 251.2; stroke-dashoffset: ${251.2 - (atsReport.score / 100) * 251.2}; transition: stroke-dashoffset 0.5s ease-in-out;"></circle>
-                                        </svg>
-                                        <div class="absolute inset-0 flex items-center justify-center text-white text-lg font-bold">${atsReport.score}</div>
-                                    </div>
-                                    <div>
-                                        <h3 class="text-xl font-bold">ATS Score: ${atsReport.score}/100</h3>
-                                        <p class="text-sm text-gray-400">${atsReport.score >= 80 ? 'Excellent! Highly compatible.' : 'Good, with room for improvement.'}</p>
-                                    </div>
-                                </div>
-                                <div>
-                                    <h4 class="font-semibold mb-2">Keywords Found:</h4>
-                                    <div class="flex flex-wrap gap-2">${atsReport.keywords_found.map(keyword => `<span class="bg-blue-600 text-white text-xs font-semibold px-2.5 py-1 rounded-full">${keyword}</span>`).join('')}</div>
-                                </div>
-                                ${atsReport.keywords_missing && atsReport.keywords_missing.length > 0 ?
-                                `<div>
-                                    <h4 class="font-semibold mb-2 mt-4">Keywords Missing for ${companyRef || 'Target Role'}:</h4>
-                                    <div class="flex flex-wrap gap-2">${atsReport.keywords_missing.map(keyword => `<span class="bg-yellow-600 text-white text-xs font-semibold px-2.5 py-1 rounded-full">${keyword}</span>`).join('')}</div>
-                                </div>` : ''}
-                                <div>
-                                    <h4 class="font-semibold mb-2 mt-4">Suggestions for Improvement:</h4>
-                                    <ul class="list-disc list-inside space-y-1 text-sm">${atsReport.suggestions.map(suggestion => `<li>${suggestion}</li>`).join('')}</ul>
-                                </div>
-                            </div>
-                        `;
-                    } catch (e) {
-                        console.error('Failed to parse JSON:', e, "Raw response:", result);
-                        reportDiv.innerHTML = '<p class="text-red-400">Failed to generate a report. The AI response was not valid. Please try again.</p>';
-                    }
-                } else {
-                    reportDiv.innerHTML = '<p class="text-red-400">Failed to generate a report. Please try again.</p>';
-                }
-            });
+            // --- AI Functions Start (REMOVED) ---
+            // All AI-related functions (generateTextContent, generateJsonContent, getAiPrompt, handleAiButtonClick, runAtsBtn)
+            // have been removed from this file as they are no longer used here.
             // --- AI Functions End ---
 
 
@@ -1053,4 +840,3 @@
     </script>
 </body>
 </html>
-
